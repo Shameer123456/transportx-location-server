@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>TransportX — Live Map</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#1a1d27;--card:#22263a;--border:#2e3248;--text:#e2e8f0;--muted:#7c85a2;--green:#22c55e;--red:#ef4444;--accent:#6c63ff}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#1e2030}
+#map{position:absolute;inset:0}
+.topbar{position:absolute;top:12px;left:12px;right:12px;z-index:500;display:flex;align-items:center;gap:8px;pointer-events:none}
+.topbar>*{pointer-events:all}
+.glass{background:rgba(26,29,39,.92);backdrop-filter:blur(10px);border:1px solid var(--border);box-shadow:0 4px 20px rgba(0,0,0,.35)}
+.logo-chip{border-radius:50px;padding:9px 16px 9px 10px;display:flex;align-items:center;gap:8px;font-weight:800;font-size:.9rem;color:var(--text)}
+.logo-dot{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#6c63ff,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:.8rem}
+.srv-badge{border-radius:50px;padding:7px 13px;display:flex;align-items:center;gap:6px;font-size:.75rem;font-weight:600;color:var(--muted);transition:all .3s}
+.srv-badge.ok{color:var(--green);border-color:rgba(34,197,94,.3)!important}
+.srv-badge.err{color:var(--red);border-color:rgba(239,68,68,.3)!important}
+.srv-dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.srv-badge.ok .srv-dot{animation:pulse 1.8s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.spacer{flex:1;pointer-events:none}
+.map-btn{border-radius:12px;padding:8px 13px;display:flex;align-items:center;gap:7px;font-size:.8rem;font-weight:600;color:var(--text);cursor:pointer;border:none;white-space:nowrap;transition:all .15s}
+.map-btn:hover{color:#a78bfa}
+.map-btn.active{color:#a78bfa;background:rgba(108,99,255,.1)}
+.layer-wrap{position:absolute;top:72px;right:12px;z-index:500}
+.layer-dd{position:absolute;top:calc(100% + 6px);right:0;background:rgba(26,29,39,.97);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:14px;padding:6px;width:200px;box-shadow:0 8px 32px rgba(0,0,0,.5);display:none}
+.layer-dd.open{display:block;animation:pop .15s ease}
+@keyframes pop{from{opacity:0;transform:scale(.95) translateY(-4px)}to{opacity:1;transform:none}}
+.layer-opt{display:flex;align-items:center;gap:10px;padding:8px 9px;border-radius:9px;cursor:pointer;border:1.5px solid transparent;transition:all .12s}
+.layer-opt:hover{background:rgba(255,255,255,.04)}
+.layer-opt.active{border-color:#6c63ff;background:rgba(108,99,255,.08)}
+.layer-thumb{width:38px;height:26px;border-radius:5px;border:1px solid var(--border);overflow:hidden;flex-shrink:0}
+.layer-thumb img{width:100%;height:100%;object-fit:cover}
+.layer-nm{font-size:.8rem;font-weight:600;color:var(--text)}
+.layer-ds{font-size:.68rem;color:var(--muted)}
+.layer-ck{margin-left:auto;font-size:.7rem;width:16px;height:16px;border-radius:50%;background:#6c63ff;color:#fff;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .12s;flex-shrink:0}
+.layer-opt.active .layer-ck{opacity:1}
+.device-panel{position:absolute;top:72px;left:12px;z-index:500;display:flex;flex-direction:column;gap:8px;max-height:calc(100vh - 100px);overflow-y:auto}
+.device-card{background:rgba(26,29,39,.92);backdrop-filter:blur(10px);border:1px solid var(--border);border-radius:14px;padding:12px 14px;width:230px;box-shadow:0 4px 20px rgba(0,0,0,.3);transition:border-color .2s}
+.device-card:hover{border-color:rgba(255,255,255,.15)}
+.device-card.followed{border-color:#6c63ff}
+.dc-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.dc-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.dc-name{font-size:.875rem;font-weight:700;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc-status{font-size:.68rem;font-weight:600;padding:2px 8px;border-radius:20px;flex-shrink:0}
+.dc-status.online{background:rgba(34,197,94,.15);color:var(--green)}
+.dc-coords{font-size:.72rem;color:var(--muted);font-family:'Consolas',monospace;margin-bottom:6px;cursor:pointer}
+.dc-chip{font-size:.68rem;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:2px 7px;color:var(--muted);display:inline-block;margin:2px 2px 0 0}
+.dc-lastseen{font-size:.68rem;color:var(--muted);margin-top:6px}
+.dc-hint{font-size:.68rem;color:#6c63ff;margin-top:3px;opacity:.8;cursor:pointer}
+.dc-actions{display:flex;gap:6px;margin-top:8px}
+.dc-btn{flex:1;padding:5px 8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.7rem;font-weight:600;cursor:pointer;transition:all .15s;text-align:center}
+.dc-btn:hover{border-color:rgba(255,255,255,.2);color:var(--text)}
+.dc-btn.kick{border-color:rgba(239,68,68,.25);color:#f87171}
+.dc-btn.kick:hover{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.5);color:var(--red)}
+.dc-btn.follow{border-color:rgba(108,99,255,.25);color:#a78bfa}
+.dc-btn.follow:hover{background:rgba(108,99,255,.15);border-color:rgba(108,99,255,.5)}
+.no-devices{background:rgba(26,29,39,.92);backdrop-filter:blur(10px);border:1px solid var(--border);border-radius:14px;padding:16px;width:230px;text-align:center;color:var(--muted);font-size:.8rem;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.kick-toast{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:600;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);border-radius:12px;padding:10px 18px;color:#f87171;font-size:.82rem;font-weight:600;backdrop-filter:blur(10px);pointer-events:none;display:none}
+.history-panel{position:absolute;top:72px;right:12px;z-index:490;width:270px;display:none;flex-direction:column;gap:8px}
+.history-panel.open{display:flex}
+.history-header{background:rgba(26,29,39,.95);backdrop-filter:blur(10px);border:1px solid var(--border);border-radius:14px;padding:12px 14px;font-size:.8rem;font-weight:700;color:var(--text);display:flex;align-items:center;justify-content:space-between}
+.history-list{display:flex;flex-direction:column;gap:6px;max-height:calc(100vh - 200px);overflow-y:auto}
+.hist-card{background:rgba(26,29,39,.92);backdrop-filter:blur(10px);border:1px solid var(--border);border-radius:12px;padding:11px 13px;cursor:pointer;transition:border-color .15s}
+.hist-card:hover{border-color:rgba(255,255,255,.2)}
+.hist-card.active{border-color:var(--accent)}
+.hc-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.hc-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.hc-name{font-size:.82rem;font-weight:700;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hc-badge{font-size:.65rem;padding:2px 7px;border-radius:20px;font-weight:600;flex-shrink:0}
+.hc-badge.live{background:rgba(34,197,94,.15);color:var(--green)}
+.hc-badge.off{background:rgba(124,133,162,.1);color:var(--muted)}
+.hc-chip{font-size:.68rem;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:5px;padding:2px 7px;color:var(--muted);display:inline-block;margin:2px 2px 0 0}
+.hc-date{font-size:.67rem;color:var(--muted);margin-top:5px}
+.log-modal{position:absolute;top:72px;right:294px;z-index:495;width:340px;max-height:calc(100vh - 90px);background:rgba(22,25,38,.97);backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:16px;box-shadow:0 12px 48px rgba(0,0,0,.6);display:none;flex-direction:column;overflow:hidden}
+.log-modal.open{display:flex;animation:slideIn .2s ease}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
+.lm-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0}
+.lm-color{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.lm-title{font-size:.9rem;font-weight:800;color:var(--text);flex:1}
+.lm-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.1rem;padding:2px 6px;border-radius:6px}
+.lm-close:hover{background:var(--card);color:var(--text)}
+.lm-stats{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;gap:16px;flex-shrink:0}
+.lm-stat-val{font-size:.9rem;font-weight:700;color:var(--text)}
+.lm-stat-lbl{font-size:.65rem;color:var(--muted)}
+.lm-actions{padding:8px 16px;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-shrink:0}
+.lm-btn{flex:1;padding:7px;border-radius:9px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:.75rem;font-weight:600;cursor:pointer;transition:all .15s}
+.lm-btn:hover{border-color:var(--accent);color:#a78bfa}
+.lm-table-wrap{flex:1;overflow-y:auto}
+.lm-table{width:100%;border-collapse:collapse;font-size:.72rem}
+.lm-table th{position:sticky;top:0;background:rgba(22,25,38,.98);padding:7px 8px;text-align:left;font-size:.63rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border)}
+.lm-table td{padding:5px 8px;border-bottom:1px solid rgba(46,50,72,.4);color:var(--text);font-family:'Consolas',monospace}
+.lm-table tr:last-child td{border-bottom:none}
+.lm-table tr:hover td{background:rgba(255,255,255,.02)}
+.lm-sep td{background:rgba(108,99,255,.08)!important;color:#a78bfa!important;font-family:'Segoe UI',sans-serif!important;font-weight:700;font-size:.68rem;padding:4px 8px}
+.lm-empty{padding:24px;text-align:center;color:var(--muted);font-size:.82rem}
+.home-btn{position:absolute;bottom:80px;right:12px;z-index:500;width:40px;height:40px;border-radius:12px;background:rgba(26,29,39,.92);backdrop-filter:blur(10px);border:1px solid var(--border);box-shadow:0 4px 20px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;font-size:1.1rem;cursor:pointer;transition:all .2s}
+.home-btn:hover{border-color:var(--accent);transform:scale(1.05)}
+.leaflet-control-zoom{border:none!important;box-shadow:0 4px 20px rgba(0,0,0,.4)!important}
+.leaflet-control-zoom a{background:rgba(26,29,39,.92)!important;backdrop-filter:blur(8px);color:var(--text)!important;border:none!important;border-bottom:1px solid var(--border)!important;width:34px!important;height:34px!important;line-height:34px!important}
+.leaflet-control-zoom a:hover{color:#a78bfa!important}
+.leaflet-bar{border-radius:12px!important;overflow:hidden}
+.leaflet-control-attribution{background:rgba(26,29,39,.65)!important;backdrop-filter:blur(4px);border-radius:8px 0 0 0!important;font-size:.62rem!important;color:#666!important}
+.leaflet-popup-content-wrapper{background:#22263a;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+.leaflet-popup-tip{background:#22263a}
+.leaflet-popup-content{margin:12px 14px}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="kick-toast" id="kick-toast"></div>
+<div class="topbar">
+  <div class="logo-chip glass"><div class="logo-dot">🗺</div>Live Tracker</div>
+  <div class="srv-badge glass err" id="srv-badge"><span class="srv-dot"></span><span id="srv-label">Connecting…</span></div>
+  <div class="spacer"></div>
+  <button class="map-btn glass" id="history-btn" onclick="toggleHistory()">📂 History</button>
+</div>
+<div class="layer-wrap">
+  <button class="map-btn glass" onclick="toggleLayerDD()">🗺 <span id="layer-lbl">Standard</span> ▾</button>
+  <div class="layer-dd" id="layer-dd">
+    <div class="layer-opt active" id="lopt-standard" onclick="setLayer('standard')">
+      <div class="layer-thumb"><img src="https://a.tile.openstreetmap.org/12/2047/1358.png"/></div>
+      <div><div class="layer-nm">Standard</div><div class="layer-ds">Clean detail</div></div>
+      <div class="layer-ck">✓</div>
+    </div>
+    <div class="layer-opt" id="lopt-dark" onclick="setLayer('dark')">
+      <div class="layer-thumb" style="background:#111"><img src="https://cartodb-basemaps-a.global.ssl.fastly.net/dark_all/12/2047/1358.png"/></div>
+      <div><div class="layer-nm">Night</div><div class="layer-ds">Dark mode</div></div>
+      <div class="layer-ck">✓</div>
+    </div>
+    <div class="layer-opt" id="lopt-satellite" onclick="setLayer('satellite')">
+      <div class="layer-thumb"><img src="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/12/1358/2047"/></div>
+      <div><div class="layer-nm">Satellite</div><div class="layer-ds">Aerial view</div></div>
+      <div class="layer-ck">✓</div>
+    </div>
+  </div>
+</div>
+<div class="device-panel" id="device-panel">
+  <div class="no-devices" id="no-devices"><div style="font-size:1.4rem;margin-bottom:6px">📱</div>Waiting for devices…</div>
+</div>
+<div class="history-panel" id="history-panel">
+  <div class="history-header"><span>📂 Device History</span><span id="hist-count" style="font-size:.72rem;color:var(--muted);font-weight:400"></span></div>
+  <div class="history-list" id="history-list"></div>
+</div>
+<div class="log-modal" id="log-modal">
+  <div class="lm-header">
+    <div class="lm-color" id="lm-color"></div>
+    <div class="lm-title" id="lm-title">—</div>
+    <button class="lm-close" onclick="closeLog()">✕</button>
+  </div>
+  <div class="lm-stats" id="lm-stats"></div>
+  <div class="lm-actions">
+    <button class="lm-btn" id="btn-show-route" onclick="showRoute()">🗺 Show Route</button>
+    <button class="lm-btn" id="btn-clear-route" onclick="clearHistoryRoute()" style="display:none">✕ Clear Route</button>
+  </div>
+  <div class="lm-table-wrap"><table class="lm-table"><thead><tr><th>#</th><th>Time</th><th>Lat</th><th>Lng</th><th>Acc</th><th>Speed</th></tr></thead><tbody id="lm-body"></tbody></table></div>
+</div>
+<div class="home-btn" onclick="goHome()" title="Reset to UK view">🏠</div>
+<script>
+const UK_CENTER=[54.5,-3.2];
+const map=L.map('map',{zoomControl:false}).setView(UK_CENTER,6);
+L.control.zoom({position:'bottomright'}).addTo(map);
+const TILES={
+  standard:L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{attribution:'© OpenStreetMap © CARTO',maxZoom:19,subdomains:'abcd'}),
+  dark:L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'© OpenStreetMap © CARTO',maxZoom:19,subdomains:'abcd'}),
+  satellite:L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'© Esri',maxZoom:19}),
+};
+const SAT_LBL=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd',pane:'shadowPane'});
+let activeLayer='standard';
+TILES.standard.addTo(map);
+function setLayer(k){
+  map.removeLayer(TILES[activeLayer]);
+  if(activeLayer==='satellite')map.removeLayer(SAT_LBL);
+  TILES[k].addTo(map);
+  if(k==='satellite')SAT_LBL.addTo(map);
+  activeLayer=k;
+  document.querySelectorAll('.layer-opt').forEach(e=>e.classList.remove('active'));
+  document.getElementById('lopt-'+k).classList.add('active');
+  document.getElementById('layer-lbl').textContent={standard:'Standard',dark:'Night',satellite:'Satellite'}[k];
+  document.getElementById('layer-dd').classList.remove('open');
+}
+function toggleLayerDD(){document.getElementById('layer-dd').classList.toggle('open')}
+document.addEventListener('click',e=>{if(!document.querySelector('.layer-wrap').contains(e.target))document.getElementById('layer-dd').classList.remove('open')});
+function goHome(){map.flyTo(UK_CENTER,6,{duration:1.2})}
+
+const devices={};
+let followedId=null;
+
+function getOrCreate(id,name,color){
+  if(devices[id])return devices[id];
+  const poly=L.polyline([],{color,weight:3,opacity:.6,dashArray:'6 4'}).addTo(map);
+  const circ=L.circle([0,0],{radius:0,color,fillColor:color,fillOpacity:.1,weight:1.5}).addTo(map);
+  const mkr=L.marker([0,0],{icon:makeIcon(color,name)}).addTo(map).bindPopup('');
+  devices[id]={name,color,online:false,marker:mkr,circle:circ,polyline:poly,trail:[],lastSeen:null};
+  return devices[id];
+}
+function makeIcon(color,name){
+  const ini=name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()||'?';
+  return L.divIcon({className:'',html:`<div style="display:flex;flex-direction:column;align-items:center"><div style="width:44px;height:44px;border-radius:50%;background:${color};border:3px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.4),0 0 0 6px ${color}30;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;color:#fff;font-family:'Segoe UI',sans-serif">${ini}</div><div style="background:${color};color:#fff;font-size:.58rem;font-weight:700;padding:2px 7px;border-radius:4px;margin-top:3px;font-family:'Segoe UI',sans-serif;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.3)">${name.length>14?name.slice(0,12)+'…':name}</div></div>`,iconSize:[44,62],iconAnchor:[22,52],popupAnchor:[0,-52]});
+}
+function popupHtml(name,color,loc){
+  const spd=loc?.speed!=null?`${(loc.speed*3.6).toFixed(1)} km/h`:'—';
+  const acc=loc?.accuracy?`±${Math.round(loc.accuracy)}m`:'—';
+  const coords=loc?`${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}`:'—';
+  const time=loc?new Date(loc.timestamp).toLocaleTimeString():'—';
+  return `<div style="font-family:'Segoe UI',sans-serif;min-width:160px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0"></div><div style="font-weight:800;font-size:.9rem;color:#e2e8f0">${name}</div></div><div style="font-size:.72rem;color:#7c85a2;margin-bottom:4px;font-family:monospace">${coords}</div><div style="display:flex;gap:8px;font-size:.72rem;color:#7c85a2"><span>🎯 ${acc}</span><span>🚀 ${spd}</span><span>🕐 ${time}</span></div></div>`;
+}
+
+function handleLocationUpdate(msg){
+  const dev=getOrCreate(msg.deviceId,msg.name,msg.color);
+  const ll=[msg.lat,msg.lng];
+  dev.online=true;dev.lastSeen=msg.timestamp||Date.now();
+  dev.marker.setLatLng(ll).setPopupContent(popupHtml(msg.name,msg.color,msg));
+  if(msg.accuracy)dev.circle.setLatLng(ll).setRadius(msg.accuracy);
+  dev.trail.push(ll);
+  if(dev.trail.length>300)dev.trail.shift();
+  dev.polyline.setLatLngs(dev.trail);
+  if(followedId===msg.deviceId)map.panTo(ll,{animate:true,duration:.8});
+  refreshLivePanel();
+}
+function handleDeviceOnline(msg){
+  const dev=getOrCreate(msg.deviceId,msg.name,msg.color);
+  dev.online=true;dev.name=msg.name;
+  if(!map.hasLayer(dev.marker))dev.marker.addTo(map);
+  if(!map.hasLayer(dev.circle))dev.circle.addTo(map);
+  if(!map.hasLayer(dev.polyline))dev.polyline.addTo(map);
+  refreshLivePanel();
+}
+function handleDeviceOffline(id){
+  const dev=devices[id];if(!dev)return;
+  if(map.hasLayer(dev.marker))map.removeLayer(dev.marker);
+  if(map.hasLayer(dev.circle))map.removeLayer(dev.circle);
+  if(map.hasLayer(dev.polyline))map.removeLayer(dev.polyline);
+  dev.online=false;
+  const card=document.getElementById('dc-'+id);if(card)card.remove();
+  delete devices[id];
+  if(followedId===id)followedId=null;
+  refreshLivePanel();
+  if(document.getElementById('history-panel').classList.contains('open'))loadHistory();
+}
+function handleInitialState(sd){
+  sd.forEach(d=>{
+    if(!d.online)return;
+    const dev=getOrCreate(d.deviceId,d.name,d.color);
+    dev.online=d.online;dev.lastSeen=d.lastSeen;
+    if(d.trail&&d.trail.length){
+      const lls=d.trail.map(p=>[p.lat,p.lng]);
+      dev.trail=lls;dev.polyline.setLatLngs(lls);
+      const last=d.trail.at(-1);
+      dev.marker.setLatLng([last.lat,last.lng]).setPopupContent(popupHtml(d.name,d.color,last));
+      if(last.accuracy)dev.circle.setLatLng([last.lat,last.lng]).setRadius(last.accuracy);
+    }
+  });
+  refreshLivePanel();
+}
+
+// ── Kick device ───────────────────────────────────────────────────────
+async function kickDevice(id,name,e){
+  e.stopPropagation();
+  if(!confirm(`Kick "${name}" offline?\n\nThis ends their current session only. They can press Start Tracking to reconnect.`))return;
+  try{
+    const r=await fetch('/api/kick/'+id,{method:'POST'});
+    if(r.ok){
+      showToast(`⛔ ${name} kicked offline`);
+    } else {
+      const j=await r.json();
+      showToast('Error: '+(j.error||'Unknown'));
+    }
+  }catch{showToast('Network error — is the server running?');}
+}
+let toastTimer;
+function showToast(msg){
+  const t=document.getElementById('kick-toast');
+  t.textContent=msg;t.style.display='block';
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.style.display='none',3500);
+}
+
+function refreshLivePanel(){
+  const panel=document.getElementById('device-panel');
+  const nodev=document.getElementById('no-devices');
+  const ids=Object.keys(devices);
+  nodev.style.display=ids.length?'none':'block';
+  ids.forEach(id=>{
+    const dev=devices[id];
+    let card=document.getElementById('dc-'+id);
+    if(!card){card=document.createElement('div');card.className='device-card';card.id='dc-'+id;panel.insertBefore(card,nodev);}
+    card.classList.toggle('followed',followedId===id);
+    const last=dev.trail.at(-1);
+    const coords=last?`${last[0].toFixed(4)}, ${last[1].toFixed(4)}`:'No location yet';
+    const ago=dev.lastSeen?fmtAgo(Date.now()-dev.lastSeen):'—';
+    const followLbl=followedId===id?'👁 Unfollow':'👁 Follow';
+    card.innerHTML=`
+      <div class="dc-top"><div class="dc-dot" style="background:${dev.color}"></div><div class="dc-name">${dev.name}</div><div class="dc-status online">Live</div></div>
+      <div class="dc-coords">${coords}</div>
+      <div><span class="dc-chip">📍 ${dev.trail.length} pings</span></div>
+      <div class="dc-lastseen">Last ping: ${ago}</div>
+      <div class="dc-actions">
+        <button class="dc-btn follow" onclick="toggleFollow('${id}')">${followLbl}</button>
+        <button class="dc-btn kick" onclick="kickDevice('${id}','${dev.name.replace(/'/g,"\\'")}',event)">⛔ Kick</button>
+      </div>`;
+  });
+}
+function toggleFollow(id){
+  followedId=followedId===id?null:id;
+  if(followedId&&devices[id]?.trail.length)map.flyTo(devices[id].trail.at(-1),Math.max(map.getZoom(),14),{duration:1.2});
+  refreshLivePanel();
+}
+setInterval(refreshLivePanel,5000);
+
+function toggleHistory(){
+  const panel=document.getElementById('history-panel');
+  const btn=document.getElementById('history-btn');
+  const open=panel.classList.toggle('open');
+  btn.classList.toggle('active',open);
+  if(open)loadHistory();else closeLog();
+}
+async function loadHistory(){
+  const list=document.getElementById('history-list');
+  list.innerHTML='<div style="padding:12px;text-align:center;color:var(--muted);font-size:.8rem">Loading…</div>';
+  try{
+    const logs=await fetch('/api/logs').then(r=>r.json());
+    document.getElementById('hist-count').textContent=`${logs.length} device${logs.length!==1?'s':''}`;
+    if(!logs.length){list.innerHTML='<div style="padding:16px;text-align:center;color:var(--muted);font-size:.8rem;background:rgba(26,29,39,.9);border:1px solid var(--border);border-radius:12px">No history yet.<br>Start tracking a device.</div>';return;}
+    list.innerHTML='';
+    logs.forEach(d=>{
+      const card=document.createElement('div');
+      card.className='hist-card';card.id='hc-'+d.deviceId;
+      card.onclick=()=>openLog(d.deviceId);
+      const first=d.firstSeen?new Date(d.firstSeen).toLocaleString():'—';
+      card.innerHTML=`<div class="hc-top"><div class="hc-dot" style="background:${d.color}"></div><div class="hc-name">${d.name}</div><div class="hc-badge ${d.online?'live':'off'}">${d.online?'Live':'Offline'}</div></div><div><span class="hc-chip">📍 ${d.pingCount} pings</span><span class="hc-chip">🔁 ${d.sessionCount} sessions</span></div><div class="hc-date">${first}</div>`;
+      list.appendChild(card);
+    });
+  }catch{list.innerHTML='<div style="padding:12px;color:var(--red);font-size:.8rem">Failed to load.</div>';}
+}
+
+let currentLogId=null,historyPoly=null,currentLogEntries=[];
+async function openLog(deviceId){
+  currentLogId=deviceId;
+  document.querySelectorAll('.hist-card').forEach(c=>c.classList.remove('active'));
+  const hc=document.getElementById('hc-'+deviceId);if(hc)hc.classList.add('active');
+  document.getElementById('log-modal').classList.add('open');
+  document.getElementById('lm-body').innerHTML='<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted)">Loading…</td></tr>';
+  document.getElementById('btn-show-route').style.display='';
+  document.getElementById('btn-clear-route').style.display='none';
+  clearHistoryRoute();
+  const entries=await fetch('/api/devices/'+deviceId+'/log').then(r=>r.json());
+  currentLogEntries=entries;
+  const locs=entries.filter(e=>e.type==='location');
+  const sessions=entries.filter(e=>e.type==='session_start');
+  const lastSess=sessions.at(-1);
+  const color=lastSess?.color||'#7c85a2';
+  const name=lastSess?.name||deviceId;
+  document.getElementById('lm-color').style.background=color;
+  document.getElementById('lm-title').textContent=name;
+  const firstTs=entries[0]?.timestamp,lastTs=entries.at(-1)?.timestamp;
+  const dur=firstTs&&lastTs?fmtDuration(lastTs-firstTs):'—';
+  document.getElementById('lm-stats').innerHTML=`<div class="lm-stat"><div class="lm-stat-val">${locs.length}</div><div class="lm-stat-lbl">Pings</div></div><div class="lm-stat"><div class="lm-stat-val">${sessions.length}</div><div class="lm-stat-lbl">Sessions</div></div><div class="lm-stat"><div class="lm-stat-val">${dur}</div><div class="lm-stat-lbl">Duration</div></div>`;
+  const body=document.getElementById('lm-body');
+  body.innerHTML='';
+  if(!locs.length){body.innerHTML='<tr><td colspan="6" class="lm-empty">No location data yet.</td></tr>';return;}
+  let sIdx=0,pIdx=0;
+  entries.forEach(e=>{
+    const tr=document.createElement('tr');
+    if(e.type==='session_start'){sIdx++;tr.className='lm-sep';tr.innerHTML=`<td colspan="6">▶ Session ${sIdx} — ${new Date(e.timestamp).toLocaleString()}</td>`;}
+    else if(e.type==='session_end'){tr.className='lm-sep';tr.innerHTML=`<td colspan="6">⏹ Ended — ${new Date(e.timestamp).toLocaleTimeString()}</td>`;}
+    else if(e.type==='location'){
+      pIdx++;
+      const spd=e.speed!=null?`${(e.speed*3.6).toFixed(1)}`:'—';
+      const acc=e.accuracy?`±${Math.round(e.accuracy)}m`:'—';
+      tr.innerHTML=`<td>${pIdx}</td><td>${new Date(e.timestamp).toLocaleTimeString()}</td><td>${e.lat.toFixed(5)}</td><td>${e.lng.toFixed(5)}</td><td>${acc}</td><td>${spd}</td>`;
+    }
+    body.appendChild(tr);
+  });
+}
+function closeLog(){
+  document.getElementById('log-modal').classList.remove('open');
+  document.querySelectorAll('.hist-card').forEach(c=>c.classList.remove('active'));
+  clearHistoryRoute();currentLogId=null;
+}
+function showRoute(){
+  const locs=currentLogEntries.filter(e=>e.type==='location');
+  if(!locs.length)return;
+  const color=document.getElementById('lm-color').style.background;
+  clearHistoryRoute();
+  historyPoly=L.polyline(locs.map(p=>[p.lat,p.lng]),{color,weight:4,opacity:.85}).addTo(map);
+  map.flyToBounds(historyPoly.getBounds().pad(.1),{duration:1.2});
+  document.getElementById('btn-show-route').style.display='none';
+  document.getElementById('btn-clear-route').style.display='';
+}
+function clearHistoryRoute(){
+  if(historyPoly){map.removeLayer(historyPoly);historyPoly=null;}
+  document.getElementById('btn-show-route').style.display='';
+  document.getElementById('btn-clear-route').style.display='none';
+}
+
+let ws,wsReconn;
+function connectWS(){
+  clearTimeout(wsReconn);
+  const proto=location.protocol==='https:'?'wss:':'ws:';
+  ws=new WebSocket(proto+'//'+location.host+'/ws');
+  ws.onopen=()=>{setSrv('ok','Live');ws.send(JSON.stringify({type:'register_viewer'}))};
+  ws.onmessage=(e)=>{
+    let msg;try{msg=JSON.parse(e.data)}catch{return}
+    if(msg.type==='initial_state')handleInitialState(msg.devices);
+    else if(msg.type==='location_update')handleLocationUpdate(msg);
+    else if(msg.type==='device_online')handleDeviceOnline(msg);
+    else if(msg.type==='device_offline'||msg.type==='device_kicked')handleDeviceOffline(msg.deviceId);
+    else if(msg.type==='trail_cleared'&&devices[msg.deviceId]){devices[msg.deviceId].trail=[];devices[msg.deviceId].polyline.setLatLngs([]);}
+  };
+  ws.onclose=()=>{setSrv('err','Disconnected');wsReconn=setTimeout(connectWS,4000)};
+}
+function setSrv(s,l){document.getElementById('srv-badge').className='srv-badge glass '+s;document.getElementById('srv-label').textContent=l}
+function fmtAgo(ms){const s=Math.floor(ms/1000);if(s<60)return s+'s ago';const m=Math.floor(s/60);if(m<60)return m+'m ago';return Math.floor(m/60)+'h ago'}
+function fmtDuration(ms){const s=Math.floor(ms/1000);if(s<60)return s+'s';const m=Math.floor(s/60);if(m<60)return m+'m';return Math.floor(m/60)+'h '+m%60+'m'}
+connectWS();
+</script>
+</body>
+</html>

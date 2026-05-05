@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="TX Tracker"/>
+<meta name="theme-color" content="#0f1117"/>
+<title>TX Tracker</title>
+<link rel="manifest" href="/tracker/manifest.json"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --bg:      #0f1117;
+  --card:    #1a1d27;
+  --card2:   #22263a;
+  --border:  #2e3248;
+  --text:    #e2e8f0;
+  --muted:   #7c85a2;
+  --accent:  #6c63ff;
+  --green:   #22c55e;
+  --red:     #ef4444;
+  --amber:   #f59e0b;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bot: env(safe-area-inset-bottom, 0px);
+}
+
+html, body { height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  overscroll-behavior: none;
+  user-select: none;
+}
+
+/* ── Status bar spacer (iOS notch) ── */
+.statusbar-spacer {
+  height: var(--safe-top);
+  background: var(--bg);
+  flex-shrink: 0;
+}
+
+/* ── Top bar ── */
+.topbar {
+  padding: 14px 20px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.topbar-logo {
+  font-size: 1rem; font-weight: 800; letter-spacing: -.3px;
+}
+.topbar-logo span { color: var(--accent); }
+.conn-badge {
+  display: flex; align-items: center; gap: 6px;
+  font-size: .72rem; font-weight: 600;
+  padding: 5px 11px; border-radius: 20px;
+  background: var(--card); border: 1px solid var(--border);
+  color: var(--muted); transition: all .3s;
+}
+.conn-badge.connected   { color: var(--green); border-color: rgba(34,197,94,.3); background: rgba(34,197,94,.08); }
+.conn-badge.connecting  { color: var(--amber); border-color: rgba(245,158,11,.3); background: rgba(245,158,11,.08); }
+.conn-badge.disconnected{ color: var(--red);   border-color: rgba(239,68,68,.3);  background: rgba(239,68,68,.08); }
+.conn-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.conn-badge.connected .conn-dot { animation: pulse 1.8s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.5)} }
+
+/* ── Scroll body ── */
+.scroll-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: calc(var(--safe-bot) + 100px);
+}
+
+/* ── Cards ── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+}
+.card-header {
+  padding: 14px 18px 0;
+  font-size: .72rem; font-weight: 700; letter-spacing: .7px;
+  text-transform: uppercase; color: var(--muted);
+}
+.card-body { padding: 12px 18px 16px; }
+
+/* ── Device name ── */
+.name-input {
+  width: 100%; background: var(--card2); border: 1.5px solid var(--border);
+  border-radius: 12px; padding: 13px 14px;
+  font-size: 1rem; font-weight: 600; color: var(--text);
+  outline: none; transition: border-color .2s;
+  -webkit-appearance: none;
+}
+.name-input:focus { border-color: var(--accent); }
+.name-hint { font-size: .75rem; color: var(--muted); margin-top: 6px; line-height: 1.4; }
+
+/* ── Interval selector ── */
+.interval-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 4px;
+}
+.interval-opt {
+  padding: 11px 6px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  background: var(--card2);
+  color: var(--muted);
+  font-size: .82rem; font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: all .15s;
+}
+.interval-opt:active { transform: scale(.96); }
+.interval-opt.selected {
+  border-color: var(--accent);
+  background: rgba(108,99,255,.15);
+  color: var(--accent);
+}
+.interval-sub { font-size: .65rem; font-weight: 400; color: var(--muted); display: block; margin-top: 2px; }
+.interval-opt.selected .interval-sub { color: var(--accent); opacity: .7; }
+
+/* ── Big action button ── */
+.fab-wrap {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  padding: 12px 16px;
+  padding-bottom: calc(var(--safe-bot) + 12px);
+  background: linear-gradient(to top, var(--bg) 70%, transparent);
+}
+.action-btn {
+  width: 100%; padding: 18px;
+  border-radius: 18px; border: none;
+  font-size: 1.05rem; font-weight: 800;
+  letter-spacing: .2px;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  cursor: pointer; transition: all .2s;
+  -webkit-appearance: none;
+}
+.action-btn.start {
+  background: var(--green); color: #fff;
+  box-shadow: 0 6px 30px rgba(34,197,94,.4);
+}
+.action-btn.start:active { transform: scale(.98); background: #16a34a; }
+.action-btn.stop {
+  background: var(--red); color: #fff;
+  box-shadow: 0 6px 30px rgba(239,68,68,.4);
+}
+.action-btn.stop:active { transform: scale(.98); background: #dc2626; }
+.action-btn:disabled { opacity: .5; }
+.btn-icon { font-size: 1.2rem; }
+
+/* ── Status display ── */
+.status-hero {
+  text-align: center;
+  padding: 20px 10px 16px;
+}
+.status-icon-wrap { position: relative; display: inline-block; margin-bottom: 10px; }
+.status-icon {
+  width: 72px; height: 72px; border-radius: 50%;
+  background: var(--card2); border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; margin: 0 auto;
+  transition: all .3s;
+}
+.status-icon.active {
+  border-color: var(--green);
+  background: rgba(34,197,94,.1);
+  box-shadow: 0 0 0 12px rgba(34,197,94,.08), 0 0 0 24px rgba(34,197,94,.04);
+  animation: glow 2s ease-in-out infinite;
+}
+@keyframes glow {
+  0%,100% { box-shadow: 0 0 0 12px rgba(34,197,94,.08), 0 0 0 24px rgba(34,197,94,.04); }
+  50%      { box-shadow: 0 0 0 16px rgba(34,197,94,.12), 0 0 0 32px rgba(34,197,94,.06); }
+}
+.status-label { font-size: 1.1rem; font-weight: 800; margin-bottom: 4px; }
+.status-sub   { font-size: .8rem; color: var(--muted); }
+
+/* ── Stats row ── */
+.stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.stat-box { background: var(--card2); border-radius: 14px; padding: 13px 14px; }
+.stat-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 4px; }
+.stat-value { font-size: 1.05rem; font-weight: 700; color: var(--text); word-break: break-all; }
+.stat-value.small { font-size: .85rem; }
+
+/* ── Log ── */
+.log-wrap {
+  max-height: 180px; overflow-y: auto;
+  font-size: .75rem; font-family: 'SF Mono', 'Consolas', monospace;
+  color: var(--muted); line-height: 1.7;
+}
+.log-line { padding: 2px 0; border-bottom: 1px solid rgba(46,50,72,.4); }
+.log-line:last-child { border-bottom: none; }
+.log-time { color: var(--accent); margin-right: 6px; }
+.log-ok   { color: var(--green); }
+.log-err  { color: var(--red); }
+.log-warn { color: var(--amber); }
+
+/* ── Install banner ── */
+.install-banner {
+  background: rgba(108,99,255,.12);
+  border: 1px solid rgba(108,99,255,.3);
+  border-radius: 14px; padding: 14px 16px;
+  display: flex; align-items: center; gap: 12px;
+  cursor: pointer;
+}
+.install-icon { font-size: 1.6rem; flex-shrink: 0; }
+.install-text { flex: 1; }
+.install-title { font-size: .875rem; font-weight: 700; color: var(--text); }
+.install-desc  { font-size: .75rem; color: var(--muted); margin-top: 2px; }
+.install-arrow { color: var(--accent); font-size: 1.1rem; }
+
+/* ── Wake lock / background notice ── */
+.notice-bar {
+  display: flex; align-items: flex-start; gap: 10px;
+  border-radius: 14px; padding: 13px 15px;
+  font-size: .78rem; line-height: 1.5;
+}
+.notice-bar.wake  { background: rgba(34,197,94,.08);  border: 1px solid rgba(34,197,94,.25); color: #86efac; }
+.notice-bar.warn  { background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.25); color: #fcd34d; }
+.notice-bar.info  { background: rgba(108,99,255,.08); border: 1px solid rgba(108,99,255,.25); color: #a5b4fc; }
+.notice-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+</style>
+</head>
+<body>
+
+<div class="statusbar-spacer"></div>
+
+<div class="topbar">
+  <div class="topbar-logo">Transport<span>X</span></div>
+  <div class="conn-badge disconnected" id="conn-badge">
+    <span class="conn-dot"></span>
+    <span id="conn-label">Offline</span>
+  </div>
+</div>
+
+<div class="scroll-body">
+
+  <!-- Status hero -->
+  <div class="card">
+    <div class="card-body" style="padding-top:18px">
+      <div class="status-hero">
+        <div class="status-icon-wrap">
+          <div class="status-icon" id="status-icon">📍</div>
+        </div>
+        <div class="status-label" id="status-label">Ready to Track</div>
+        <div class="status-sub" id="status-sub">Set your device name and hit Start</div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-box">
+          <div class="stat-label">Last Ping</div>
+          <div class="stat-value small" id="stat-lastping">—</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Pings Sent</div>
+          <div class="stat-value" id="stat-count">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Latitude</div>
+          <div class="stat-value small" id="stat-lat">—</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Longitude</div>
+          <div class="stat-value small" id="stat-lng">—</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Accuracy</div>
+          <div class="stat-value small" id="stat-acc">—</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Speed</div>
+          <div class="stat-value small" id="stat-speed">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Device name -->
+  <div class="card">
+    <div class="card-header">Device Name</div>
+    <div class="card-body">
+      <input class="name-input" id="device-name" type="text" placeholder="e.g. Diamond iPhone" maxlength="30" autocomplete="off" autocorrect="off" spellcheck="false"/>
+      <div class="name-hint">This name appears on the live map. Saved automatically.</div>
+    </div>
+  </div>
+
+  <!-- Ping interval -->
+  <div class="card">
+    <div class="card-header">Ping Interval</div>
+    <div class="card-body">
+      <div class="interval-grid" id="interval-grid">
+        <div class="interval-opt" data-secs="10">10s<span class="interval-sub">Debug</span></div>
+        <div class="interval-opt" data-secs="30">30s<span class="interval-sub">High freq</span></div>
+        <div class="interval-opt selected" data-secs="60">1 min<span class="interval-sub">Balanced</span></div>
+        <div class="interval-opt" data-secs="120">2 min<span class="interval-sub">Normal</span></div>
+        <div class="interval-opt" data-secs="300">5 min<span class="interval-sub">Battery+</span></div>
+        <div class="interval-opt" data-secs="600">10 min<span class="interval-sub">Max save</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Activity log -->
+  <div class="card">
+    <div class="card-header">Activity Log</div>
+    <div class="card-body">
+      <div class="log-wrap" id="log"></div>
+    </div>
+  </div>
+
+  <!-- Wake lock status (shown while tracking) -->
+  <div class="notice-bar wake" id="wakelock-bar" style="display:none">
+    <span class="notice-icon">🔆</span>
+    <span>Screen kept on while tracking is active. Your device won't sleep mid-journey.</span>
+  </div>
+
+  <!-- Background notice (iOS warning, shown when tracking starts) -->
+  <div class="notice-bar warn" id="bg-warning" style="display:none">
+    <span class="notice-icon">⚠️</span>
+    <span><strong>iOS: Keep this screen visible.</strong> If you switch to another app or lock the phone, location pings will pause until you return here.</span>
+  </div>
+
+  <!-- Install prompt (shown when applicable) -->
+  <div class="install-banner" id="install-banner" style="display:none" onclick="installPWA()">
+    <div class="install-icon">📲</div>
+    <div class="install-text">
+      <div class="install-title">Add to Home Screen</div>
+      <div class="install-desc">Install for faster access & offline support</div>
+    </div>
+    <div class="install-arrow">›</div>
+  </div>
+
+</div>
+
+<!-- Floating action button -->
+<div class="fab-wrap">
+  <button class="action-btn start" id="action-btn" onclick="toggleTracking()">
+    <span class="btn-icon">▶</span>
+    Start Tracking
+  </button>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────
+//  Constants & state
+// ─────────────────────────────────────────────────────────────────────
+const DEVICE_ID_KEY   = 'tx_device_id';
+const DEVICE_NAME_KEY = 'tx_device_name';
+const INTERVAL_KEY    = 'tx_interval';
+
+let deviceId   = localStorage.getItem(DEVICE_ID_KEY)   || generateId();
+let deviceName = localStorage.getItem(DEVICE_NAME_KEY) || '';
+let intervalSecs = parseInt(localStorage.getItem(INTERVAL_KEY) || '60', 10);
+
+let ws           = null;
+let wsReady      = false;
+let isTracking   = false;
+let pingTimer    = null;
+let pingCount    = 0;
+let reconnectTimer = null;
+let wakeLock     = null;
+
+// ─────────────────────────────────────────────────────────────────────
+//  Wake Lock
+// ─────────────────────────────────────────────────────────────────────
+async function acquireWakeLock() {
+  if (!('wakeLock' in navigator)) return; // not supported (older browsers)
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    document.getElementById('wakelock-bar').style.display = 'flex';
+    wakeLock.addEventListener('release', () => {
+      wakeLock = null;
+      document.getElementById('wakelock-bar').style.display = 'none';
+      // Re-acquire when page becomes visible again (e.g. after screen off)
+      if (isTracking) {
+        document.addEventListener('visibilitychange', reacquireOnVisible, { once: true });
+      }
+    });
+    logLine('Screen wake lock acquired — screen will stay on', 'ok');
+  } catch (err) {
+    logLine(`Wake lock unavailable: ${err.message}`, 'warn');
+  }
+}
+
+async function reacquireOnVisible() {
+  if (document.visibilityState === 'visible' && isTracking) {
+    await acquireWakeLock();
+  }
+}
+
+function releaseWakeLock() {
+  if (wakeLock) {
+    wakeLock.release();
+    wakeLock = null;
+  }
+  document.getElementById('wakelock-bar').style.display = 'none';
+}
+
+// Re-acquire if user returns to the tab/app while tracking
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && isTracking && !wakeLock) {
+    acquireWakeLock();
+  }
+});
+
+localStorage.setItem(DEVICE_ID_KEY, deviceId);
+
+// ─────────────────────────────────────────────────────────────────────
+//  Init
+// ─────────────────────────────────────────────────────────────────────
+document.getElementById('device-name').value = deviceName;
+document.getElementById('device-name').addEventListener('input', (e) => {
+  deviceName = e.target.value.trim();
+  localStorage.setItem(DEVICE_NAME_KEY, deviceName);
+});
+
+// Interval options
+document.querySelectorAll('.interval-opt').forEach(el => {
+  if (parseInt(el.dataset.secs) === intervalSecs) el.classList.add('selected');
+  else el.classList.remove('selected');
+  el.addEventListener('click', () => {
+    if (isTracking) return;
+    document.querySelectorAll('.interval-opt').forEach(o => o.classList.remove('selected'));
+    el.classList.add('selected');
+    intervalSecs = parseInt(el.dataset.secs);
+    localStorage.setItem(INTERVAL_KEY, intervalSecs);
+  });
+});
+
+// Service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/tracker/sw.js', { scope: '/tracker/' })
+    .then(() => logLine('Service worker registered', 'ok'))
+    .catch(() => {});
+}
+
+// Auto-connect on load
+connectWS();
+
+// ─────────────────────────────────────────────────────────────────────
+//  WebSocket
+// ─────────────────────────────────────────────────────────────────────
+function connectWS() {
+  clearTimeout(reconnectTimer);
+  if (ws && ws.readyState <= WebSocket.OPEN) return;
+
+  setConnBadge('connecting', 'Connecting…');
+
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${location.host}/ws`);
+
+  ws.onopen = () => {
+    wsReady = true;
+    setConnBadge('connected', 'Connected');
+    logLine('Connected to server', 'ok');
+    ws.send(JSON.stringify({ type: 'register_tracker', deviceId, name: deviceName || 'Unnamed Device' }));
+  };
+
+  ws.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'registered') {
+        logLine(`Registered as "${msg.name}"`, 'ok');
+      }
+    } catch {}
+  };
+
+  ws.onclose = () => {
+    wsReady = false;
+    setConnBadge('disconnected', 'Disconnected');
+    logLine('Connection lost — retrying in 5s', 'warn');
+    reconnectTimer = setTimeout(connectWS, 5000);
+  };
+
+  ws.onerror = () => {
+    ws.close();
+  };
+}
+
+function sendLocation(lat, lng, accuracy, speed, heading) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    logLine('Send failed — not connected', 'err');
+    connectWS();
+    return;
+  }
+  ws.send(JSON.stringify({
+    type: 'location', lat, lng, accuracy, speed, heading,
+    timestamp: Date.now(),
+  }));
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  Tracking
+// ─────────────────────────────────────────────────────────────────────
+function toggleTracking() {
+  if (!isTracking) startTracking();
+  else stopTracking();
+}
+
+function startTracking() {
+  if (!deviceName) {
+    document.getElementById('device-name').focus();
+    logLine('Enter a device name first', 'warn');
+    return;
+  }
+  if (!navigator.geolocation) {
+    logLine('Geolocation not supported on this device', 'err');
+    return;
+  }
+
+  isTracking = true;
+  pingCount  = 0;
+
+  // Re-register with current name (in case it changed)
+  if (wsReady) {
+    ws.send(JSON.stringify({ type: 'register_tracker', deviceId, name: deviceName }));
+  }
+
+  // Keep screen on
+  acquireWakeLock();
+
+  // Show iOS background warning
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  if (isIOS) document.getElementById('bg-warning').style.display = 'flex';
+
+  updateTrackingUI(true);
+  logLine(`Started — pinging every ${fmtSecs(intervalSecs)}`, 'ok');
+
+  // Ping immediately, then on interval
+  doPing();
+  pingTimer = setInterval(doPing, intervalSecs * 1000);
+}
+
+function stopTracking() {
+  isTracking = false;
+  clearInterval(pingTimer);
+  pingTimer = null;
+  releaseWakeLock();
+  document.getElementById('bg-warning').style.display = 'none';
+  updateTrackingUI(false);
+  logLine('Tracking stopped', 'warn');
+}
+
+function doPing() {
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const { latitude: lat, longitude: lng, accuracy, speed, heading } = pos.coords;
+      sendLocation(lat, lng, accuracy, speed, heading);
+      pingCount++;
+      const now = new Date().toLocaleTimeString();
+      document.getElementById('stat-lastping').textContent = now;
+      document.getElementById('stat-count').textContent    = pingCount;
+      document.getElementById('stat-lat').textContent      = lat.toFixed(5);
+      document.getElementById('stat-lng').textContent      = lng.toFixed(5);
+      document.getElementById('stat-acc').textContent      = accuracy ? `±${Math.round(accuracy)}m` : '—';
+      document.getElementById('stat-speed').textContent    = speed != null ? `${(speed * 3.6).toFixed(1)} km/h` : '—';
+      logLine(`Ping #${pingCount} — ${lat.toFixed(4)}, ${lng.toFixed(4)}`, 'ok');
+    },
+    (err) => {
+      const msgs = ['', 'Permission denied', 'Location unavailable', 'Timeout'];
+      logLine(`GPS error: ${msgs[err.code] || err.message}`, 'err');
+    },
+    { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  UI helpers
+// ─────────────────────────────────────────────────────────────────────
+function updateTrackingUI(tracking) {
+  const icon  = document.getElementById('status-icon');
+  const label = document.getElementById('status-label');
+  const sub   = document.getElementById('status-sub');
+  const btn   = document.getElementById('action-btn');
+
+  if (tracking) {
+    icon.classList.add('active');
+    icon.textContent = '📡';
+    label.textContent = 'Tracking Active';
+    sub.textContent   = `Pinging every ${fmtSecs(intervalSecs)}`;
+    btn.className     = 'action-btn stop';
+    btn.innerHTML     = '<span class="btn-icon">⏹</span> Stop Tracking';
+    document.querySelectorAll('.interval-opt').forEach(el => el.style.opacity = '.5');
+    d

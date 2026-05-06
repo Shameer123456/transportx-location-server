@@ -122,10 +122,25 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     const { role, driverId } = socket.data || {};
     if (role === 'driver' && driverId && onlineDrivers[driverId]) {
-      delete onlineDrivers[driverId]; io.emit('driver:offline', { driverId });
+      // Don't remove immediately — driver may just be navigating between pages.
+      // TTL cleanup will expire them if they don't reconnect within 3 minutes.
+      onlineDrivers[driverId].socketId = null;
+      onlineDrivers[driverId].disconnectedAt = Date.now();
     }
   });
 });
+
+// Auto-expire drivers that haven't sent a location update in 3 minutes
+const DRIVER_EXPIRE_MS = 3 * 60 * 1000;
+setInterval(() => {
+  const now = Date.now();
+  for (const [driverId, d] of Object.entries(onlineDrivers)) {
+    if (now - d.lastSeen > DRIVER_EXPIRE_MS) {
+      delete onlineDrivers[driverId];
+      io.emit('driver:offline', { driverId });
+    }
+  }
+}, 30000);
 
 // Legacy raw WS handler
 wss.on('connection', (ws) => {

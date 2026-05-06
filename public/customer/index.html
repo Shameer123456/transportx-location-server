@@ -245,6 +245,23 @@ socket.on('driver:offline', ({ driverId }) => {
   if (selectedDriver?.driverId === driverId) closeSheet();
 });
 
+// ── REST polling fallback ───────────────────────────────────────────────
+// Catches drivers that registered after the initial socket handshake
+// (e.g. after a server restart or cold start on Render)
+async function pollDrivers() {
+  try {
+    const res = await fetch('/api/drivers/online');
+    if (!res.ok) return;
+    const list = await res.json();
+    list.forEach(d => {
+      if (d.lat || d.lng) addOrUpdateDriver({ driverId: d.driverId, name: d.name, lat: d.lat, lng: d.lng });
+    });
+    updateDriverCount();
+  } catch (_) {}
+}
+pollDrivers(); // run immediately on load
+setInterval(pollDrivers, 10000); // then every 10 seconds
+
 // ── Driver markers ──────────────────────────────────────────────────────
 function makeDriverIcon(name, color = '#1A56DB') {
   const ini = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';

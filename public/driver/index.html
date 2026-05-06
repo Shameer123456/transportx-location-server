@@ -375,6 +375,16 @@ function setConn(s, t) {
 
 // Don't go offline on page navigation — server uses TTL expiry (3 min no ping = offline).
 // Only explicit "Go Offline" button clears the online state.
+
+// ── Heartbeat ─────────────────────────────────────────────────────────
+// Re-registers with the server every 45s. Fixes the Render cold-start race:
+// if the server restarted, onlineDrivers is wiped; this brings the driver back
+// without needing the user to manually go offline → online.
+setInterval(() => {
+  if (isOnline && socket?.connected) {
+    socket.emit('driver:online', { driverId, name: driverName, lat: myLat || 0, lng: myLng || 0 });
+  }
+}, 45000);
 </script>
 </body>
 </html>

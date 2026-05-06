@@ -364,7 +364,7 @@ const DEVICE_NAME_KEY = 'tx_device_name';
 const INTERVAL_KEY    = 'tx_interval';
 
 let deviceId   = localStorage.getItem(DEVICE_ID_KEY)   || generateId();
-let deviceName = localStorage.getItem(DEVICE_NAME_KEY) || '';
+let deviceName = localStorage.getItem(DEVICE_NAME_KEY) || ('Driver ' + Math.floor(Math.random() * 900 + 100));
 let intervalSecs = parseInt(localStorage.getItem(INTERVAL_KEY) || '60', 10);
 
 let ws           = null;
@@ -513,10 +513,11 @@ function toggleTracking() {
 }
 
 function startTracking() {
+  // Auto-fill name if still blank
   if (!deviceName) {
-    document.getElementById('device-name').focus();
-    logLine('Enter a device name first', 'warn');
-    return;
+    deviceName = 'Driver ' + Math.floor(Math.random() * 900 + 100);
+    localStorage.setItem(DEVICE_NAME_KEY, deviceName);
+    document.getElementById('device-name').value = deviceName;
   }
   if (!navigator.geolocation) {
     logLine('Geolocation not supported on this device', 'err');

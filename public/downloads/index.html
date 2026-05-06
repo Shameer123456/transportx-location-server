@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>TransportX — Get the App</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --primary:#1A56DB;--accent:#0EA5E9;--green:#10B981;--amber:#F59E0B;
+  --bg:#F9FAFB;--card:#FFFFFF;--border:#E5E7EB;--text:#111827;--muted:#6B7280;--light:#F3F4F6;
+  --shadow:0 4px 24px rgba(0,0,0,.09),0 1px 4px rgba(0,0,0,.05);
+  --shadow-lg:0 12px 48px rgba(0,0,0,.13),0 4px 16px rgba(0,0,0,.07);
+}
+html,body{min-height:100%;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text)}
+
+/* nav */
+.topnav{background:var(--card);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;gap:0;height:54px}
+.nav-logo{display:flex;align-items:center;gap:8px;font-weight:800;font-size:.95rem;color:var(--text);text-decoration:none;margin-right:24px}
+.nav-logo-icon{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center}
+.nav-logo-icon svg{width:15px;height:15px;fill:none;stroke:#fff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.nav-links{display:flex;align-items:center;gap:2px;flex:1}
+.nav-link{padding:7px 12px;border-radius:8px;font-size:.82rem;font-weight:600;color:var(--muted);text-decoration:none;transition:all .15s}
+.nav-link:hover{color:var(--text);background:var(--light)}
+.nav-link.active{color:var(--primary);background:rgba(26,86,219,.07)}
+
+/* hero */
+.hero{text-align:center;padding:56px 24px 40px;max-width:580px;margin:0 auto}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(26,86,219,.08);color:var(--primary);font-size:.78rem;font-weight:700;padding:5px 12px;border-radius:20px;margin-bottom:18px}
+.hero-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--primary)}
+.hero h1{font-size:2rem;font-weight:900;color:var(--text);letter-spacing:-.03em;line-height:1.15;margin-bottom:12px}
+.hero p{font-size:.95rem;color:var(--muted);line-height:1.65}
+
+/* cards grid */
+.cards-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:720px;margin:0 auto;padding:0 24px 48px}
+@media(max-width:600px){.cards-grid{grid-template-columns:1fr}}
+
+.dl-card{background:var(--card);border-radius:22px;padding:28px 24px;box-shadow:var(--shadow);border:2px solid transparent;transition:all .2s}
+.dl-card:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px)}
+.dl-card.android{border-color:rgba(16,185,129,.15)}
+.dl-card.ios{border-color:rgba(26,86,219,.12)}
+
+.dl-platform{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.dl-platform-icon{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.dl-platform-icon.android-icon{background:rgba(16,185,129,.1)}
+.dl-platform-icon.android-icon svg{fill:#10B981}
+.dl-platform-icon.ios-icon{background:rgba(26,86,219,.08)}
+.dl-platform-icon.ios-icon svg{fill:var(--text)}
+.dl-platform-name{font-size:1.1rem;font-weight:800;color:var(--text)}
+.dl-platform-sub{font-size:.75rem;color:var(--muted);margin-top:1px}
+
+.dl-info{font-size:.82rem;color:var(--muted);line-height:1.6;margin-bottom:20px}
+
+.dl-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;border-radius:13px;text-decoration:none;font-size:.9rem;font-weight:800;transition:all .15s;font-family:inherit;border:none;cursor:pointer}
+.dl-btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.dl-btn.android-btn{background:var(--green);color:#fff;box-shadow:0 4px 14px rgba(16,185,129,.3)}
+.dl-btn.android-btn:hover{background:#0da271;box-shadow:0 6px 18px rgba(16,185,129,.4)}
+.dl-btn.ios-btn{background:var(--primary);color:#fff;box-shadow:0 4px 14px rgba(26,86,219,.25)}
+.dl-btn.ios-btn:hover{background:#1347c8}
+.dl-btn:active{transform:scale(.97)}
+
+.dl-badge{display:inline-flex;align-items:center;gap:5px;font-size:.7rem;font-weight:700;padding:4px 9px;border-radius:20px;margin-top:12px}
+.dl-badge.debug{background:rgba(245,158,11,.1);color:var(--amber)}
+.dl-badge.unsigned{background:rgba(107,114,128,.1);color:var(--muted)}
+.dl-badge .dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+
+/* steps */
+.steps-section{max-width:720px;margin:0 auto;padding:0 24px 56px}
+.steps-title{font-size:1.05rem;font-weight:800;color:var(--text);margin-bottom:16px}
+
+.steps-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:600px){.steps-grid{grid-template-columns:1fr}}
+
+.step-card{background:var(--card);border-radius:16px;padding:18px;box-shadow:var(--shadow)}
+.step-num{width:28px;height:28px;border-radius:50%;font-size:.8rem;font-weight:800;display:flex;align-items:center;justify-content:center;margin-bottom:10px}
+.step-num.green{background:rgba(16,185,129,.1);color:var(--green)}
+.step-num.blue{background:rgba(26,86,219,.1);color:var(--primary)}
+.step-title{font-size:.88rem;font-weight:700;color:var(--text);margin-bottom:4px}
+.step-desc{font-size:.78rem;color:var(--muted);line-height:1.55}
+
+/* info box */
+.info-box{max-width:720px;margin:0 auto 48px;padding:0 24px}
+.info-inner{background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:14px;padding:16px 18px;display:flex;gap:12px;align-items:flex-start}
+.info-icon{font-size:1.1rem;flex-shrink:0;margin-top:1px}
+.info-text{font-size:.8rem;color:var(--text);line-height:1.6}
+.info-text strong{font-weight:700}
+
+/* version info */
+.version-row{text-align:center;font-size:.75rem;color:var(--muted);padding-bottom:36px}
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-logo" href="/">
+    <div class="nav-logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    </div>
+    TransportX
+  </a>
+  <div class="nav-links">
+    <a class="nav-link" href="/customer/">Find a Driver</a>
+    <a class="nav-link" href="/driver/">Driver Dashboard</a>
+    <a class="nav-link" href="/viewer/">Live Map</a>
+    <a class="nav-link active" href="/downloads/">Get App</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="hero-badge"><span class="dot"></span> Latest Build</div>
+  <h1>Get the TransportX App</h1>
+  <p>Download the native driver tracking app directly to your device. No app store needed — just download, install, and go.</p>
+</div>
+
+<div class="cards-grid">
+
+  <!-- Android -->
+  <div class="dl-card android">
+    <div class="dl-platform">
+      <div class="dl-platform-icon android-icon">
+        <!-- Android robot icon -->
+        <svg viewBox="0 0 24 24" width="24" height="24"><path d="M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85-.29-.15-.65-.06-.83.22l-1.88 3.24A10.12 10.12 0 0012 8c-1.53 0-2.97.35-4.47.91L5.65 5.67c-.19-.28-.54-.37-.83-.22-.3.16-.42.54-.26.85L6.4 9.48A9.12 9.12 0 003 17h18a9.12 9.12 0 00-3.4-7.52zM8.5 14.5a1 1 0 110-2 1 1 0 010 2zm7 0a1 1 0 110-2 1 1 0 010 2z"/></svg>
+      </div>
+      <div>
+        <div class="dl-platform-name">Android</div>
+        <div class="dl-platform-sub">APK · Direct install</div>
+      </div>
+    </div>
+    <div class="dl-info">
+      Download and install directly — no Play Store required. You'll need to allow installation from unknown sources in your Android settings (Settings → Security → Unknown Sources).
+    </div>
+    <a class="dl-btn android-btn" href="/downloads/files/TransportXTracker-android-debug-apk.zip" download>
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download Android APK
+    </a>
+    <div><span class="dl-badge debug"><span class="dot"></span> Debug build</span></div>
+  </div>
+
+  <!-- iOS -->
+  <div class="dl-card ios">
+    <div class="dl-platform">
+      <div class="dl-platform-icon ios-icon">
+        <svg viewBox="0 0 24 24" width="24" height="24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98l-.09.06c-.22.14-2.18 1.28-2.16 3.81.03 3.02 2.65 4.03 2.68 4.04l-.07.27zM13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+      </div>
+      <div>
+        <div class="dl-platform-name">iOS</div>
+        <div class="dl-platform-sub">IPA · Sideload via AltStore</div>
+      </div>
+    </div>
+    <div class="dl-info">
+      Download the unsigned IPA and install via AltStore or Sideloadly. An Apple Developer account is required to sign and install directly without a third-party tool.
+    </div>
+    <a class="dl-btn ios-btn" href="/downloads/files/TransportXTracker-unsigned-ipa.zip" download>
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download iOS IPA
+    </a>
+    <div><span class="dl-badge unsigned"><span class="dot"></span> Unsigned build</span></div>
+  </div>
+
+</div>
+
+<!-- Android install steps -->
+<div class="steps-section">
+  <div class="steps-title">Android — How to install</div>
+  <div class="steps-grid">
+    <div class="step-card">
+      <div class="step-num green">1</div>
+      <div class="step-title">Download the APK</div>
+      <div class="step-desc">Tap "Download Android APK" above. Your browser will download a .zip file containing the APK.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num green">2</div>
+      <div class="step-title">Extract the APK</div>
+      <div class="step-desc">Open your Downloads folder, extract the zip and find the .apk file inside.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num green">3</div>
+      <div class="step-title">Allow unknown sources</div>
+      <div class="step-desc">Go to Settings → Security (or Apps → Special Access) and enable "Install unknown apps" for your file manager or browser.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num green">4</div>
+      <div class="step-title">Tap to install</div>
+      <div class="step-desc">Tap the .apk file in your Downloads folder and follow the install prompts. Done — open TransportX and go online.</div>
+    </div>
+  </div>
+</div>
+
+<div class="info-box">
+  <div class="info-inner">
+    <div class="info-icon">⚠️</div>
+    <div class="info-text">
+      <strong>These are development builds.</strong> The Android APK is a debug build and the iOS IPA is unsigned. They are intended for testing and internal use only. To update the app files, replace the files in the <code style="background:rgba(0,0,0,.06);padding:1px 5px;border-radius:4px">public/downloads/files/</code> folder on the server and redeploy.
+    </div>
+  </div>
+</div>
+
+<div class="version-row" id="version-row">Loading build info…</div>
+
+<script>
+// Show file info dynamically
+async function loadFileInfo() {
+  const el = document.getElementById('version-row');
+  try {
+    // Just show current date as build reference
+    const d = new Date();
+    el.textContent = 'Build available · Last updated: ' + d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  } catch {
+    el.textContent = 'TransportX Driver App';
+  }
+}
+loadFileInfo();
+</script>
+</body>
+</html>

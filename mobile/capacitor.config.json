@@ -1,0 +1,15 @@
+{
+  "appId": "com.transportx.tracker",
+  "appName": "TX Tracker",
+  "webDir": "www",
+  "server": {
+    "url": "https://transportx-location-server.onrender.com/tracker/",
+    "cleartext": false
+  },
+  "android": {
+    "allowMixedContent": false
+  },
+  "ios": {
+    "limitsNavigationsToAppBoundDomains": true
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "transportx-mobile",
+  "version": "1.0.0",
+  "description": "TransportX mobile tracker app",
+  "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/ios": "^6.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0"
+  }
+}

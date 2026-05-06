@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>TransportX — Driver</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --primary:#1A56DB;--accent:#0EA5E9;--green:#10B981;--red:#EF4444;
+  --bg:#F9FAFB;--card:#FFFFFF;--border:#E5E7EB;--text:#111827;--muted:#6B7280;--light:#F3F4F6;
+  --shadow:0 4px 24px rgba(0,0,0,.09),0 1px 4px rgba(0,0,0,.05);
+  --shadow-lg:0 12px 48px rgba(0,0,0,.14),0 4px 16px rgba(0,0,0,.07);
+}
+html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg)}
+
+/* ── Name prompt overlay ── */
+#name-overlay{position:fixed;inset:0;z-index:2000;background:rgba(17,24,39,.6);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:24px}
+#name-overlay.hidden{display:none}
+.name-card{background:var(--card);border-radius:24px;padding:36px 32px;width:100%;max-width:360px;box-shadow:var(--shadow-lg);text-align:center}
+.name-card .logo{width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;margin:0 auto 20px}
+.name-card .logo svg{width:26px;height:26px;fill:none;stroke:#fff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.name-card h2{font-size:1.3rem;font-weight:800;color:var(--text);margin-bottom:6px}
+.name-card p{font-size:.85rem;color:var(--muted);margin-bottom:24px}
+.name-card input{width:100%;padding:13px 16px;border-radius:14px;border:1.5px solid var(--border);font-size:1rem;color:var(--text);font-family:inherit;outline:none;text-align:center;transition:border-color .15s}
+.name-card input:focus{border-color:var(--primary)}
+.name-card input::placeholder{color:#9CA3AF}
+.name-card button{width:100%;margin-top:14px;padding:14px;border-radius:14px;border:none;background:var(--primary);color:#fff;font-size:.95rem;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;box-shadow:0 4px 16px rgba(26,86,219,.3)}
+.name-card button:hover{background:#1347c8}
+.name-card button:active{transform:scale(.98)}
+
+/* ── Dashboard ── */
+#dashboard{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg)}
+
+.dash-header{background:var(--card);padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0}
+.dash-avatar{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.88rem;color:#fff;flex-shrink:0}
+.dash-info{flex:1}
+.dash-name{font-size:.95rem;font-weight:800;color:var(--text)}
+.dash-id{font-size:.72rem;color:var(--muted);margin-top:1px}
+.conn-badge{padding:5px 10px;border-radius:20px;font-size:.72rem;font-weight:700;display:flex;align-items:center;gap:5px;flex-shrink:0}
+.conn-badge .dot{width:6px;height:6px;border-radius:50%}
+.conn-badge.ok{background:rgba(16,185,129,.1);color:var(--green)}
+.conn-badge.ok .dot{background:var(--green);animation:pulse 2s infinite}
+.conn-badge.err{background:rgba(239,68,68,.08);color:var(--red)}
+.conn-badge.err .dot{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+.dash-nav{background:var(--card);border-bottom:1px solid var(--border);display:flex;flex-shrink:0}
+.nav-link{flex:1;padding:11px 8px;text-align:center;font-size:.75rem;font-weight:700;color:var(--muted);text-decoration:none;border-bottom:2px solid transparent;transition:all .15s}
+.nav-link:hover{color:var(--text)}
+.nav-link.active{color:var(--primary);border-bottom-color:var(--primary)}
+
+.dash-body{flex:1;overflow-y:auto;padding:18px 16px;display:flex;flex-direction:column;gap:14px}
+
+/* status card */
+.status-card{background:var(--card);border-radius:20px;padding:26px 20px;box-shadow:var(--shadow);text-align:center;border:2px solid transparent;transition:all .3s}
+.status-card.online{box-shadow:0 8px 32px rgba(16,185,129,.16);border-color:rgba(16,185,129,.2)}
+.status-indicator{width:68px;height:68px;border-radius:50%;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;transition:all .3s}
+.status-indicator.online{background:rgba(16,185,129,.1);animation:glow 2.5s infinite}
+.status-indicator.offline{background:var(--light)}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.25)}50%{box-shadow:0 0 0 14px rgba(16,185,129,0)}}
+.status-indicator svg{width:30px;height:30px;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.status-indicator.online svg{stroke:var(--green)}
+.status-indicator.offline svg{stroke:var(--muted)}
+.status-label{font-size:1.25rem;font-weight:800;color:var(--text);margin-bottom:4px}
+.status-sub{font-size:.8rem;color:var(--muted);margin-bottom:22px;line-height:1.5}
+.toggle-btn{width:100%;padding:15px;border-radius:15px;border:none;font-size:.95rem;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:9px;transition:all .2s}
+.toggle-btn svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.toggle-btn.go-online{background:var(--green);color:#fff;box-shadow:0 5px 18px rgba(16,185,129,.32)}
+.toggle-btn.go-online:hover{background:#0da271}
+.toggle-btn.go-offline{background:rgba(239,68,68,.08);color:var(--red);border:2px solid rgba(239,68,68,.18)}
+.toggle-btn.go-offline:hover{background:rgba(239,68,68,.15)}
+.toggle-btn:active{transform:scale(.97)}
+
+/* stats row */
+.stats-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stat-card{background:var(--card);border-radius:16px;padding:16px;box-shadow:var(--shadow)}
+.stat-icon{font-size:1.1rem;margin-bottom:8px}
+.stat-val{font-size:1.35rem;font-weight:800;color:var(--text)}
+.stat-lbl{font-size:.7rem;color:var(--muted);margin-top:3px}
+
+/* location card */
+.loc-card{background:var(--card);border-radius:16px;padding:14px 16px;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px}
+.loc-icon{width:36px;height:36px;border-radius:10px;background:var(--light);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.loc-icon svg{width:16px;height:16px;fill:none;stroke:var(--primary);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.loc-text{flex:1}
+.loc-title{font-size:.8rem;font-weight:700;color:var(--text)}
+.loc-coords{font-size:.72rem;color:var(--muted);font-family:'Consolas',monospace;margin-top:2px}
+.loc-pill{font-size:.7rem;font-weight:600;padding:3px 9px;border-radius:20px;flex-shrink:0}
+.loc-pill.active{background:rgba(16,185,129,.1);color:var(--green)}
+.loc-pill.inactive{background:var(--light);color:var(--muted)}
+
+/* map card */
+.map-card{background:var(--card);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);height:170px;position:relative}
+#mini-map{width:100%;height:100%}
+.map-lbl{position:absolute;bottom:8px;left:8px;background:rgba(255,255,255,.92);backdrop-filter:blur(4px);border-radius:8px;padding:3px 10px;font-size:.7rem;font-weight:700;color:var(--text);z-index:10}
+
+/* change name link */
+.change-name{text-align:center;font-size:.75rem;color:var(--muted);cursor:pointer;padding:4px}
+.change-name:hover{color:var(--primary)}
+</style>
+</head>
+<body>
+
+<!-- Name prompt -->
+<div id="name-overlay">
+  <div class="name-card">
+    <div class="logo">
+      <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+    </div>
+    <h2>Driver Setup</h2>
+    <p>Enter your name to get started. This is shown to customers.</p>
+    <input type="text" id="name-input" placeholder="Your name" autocomplete="name" maxlength="40"/>
+    <button id="name-btn">Get Started →</button>
+  </div>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboard">
+  <div class="dash-header">
+    <div class="dash-avatar" id="dash-avatar">?</div>
+    <div class="dash-info">
+      <div class="dash-name" id="dash-name">Driver</div>
+      <div class="dash-id" id="dash-id">—</div>
+    </div>
+    <div class="conn-badge err" id="conn-badge">
+      <span class="dot"></span><span id="conn-label">Connecting</span>
+    </div>
+  </div>
+
+  <div class="dash-nav">
+    <a class="nav-link active" href="/driver/">Dashboard</a>
+    <a class="nav-link" href="/customer/">Customer View</a>
+    <a class="nav-link" href="/downloads/">Get App</a>
+    <a class="nav-link" href="/">Home</a>
+  </div>
+
+  <div class="dash-body">
+
+    <div class="status-card" id="status-card">
+      <div class="status-indicator offline" id="status-indicator">
+        <svg id="status-icon" viewBox="0 0 24 24">
+          <line x1="1" y1="1" x2="23" y2="23"/>
+          <path d="M16.72 11.06A10.94 10.94 0 0119 12.55"/>
+          <path d="M5 12.55a10.94 10.94 0 015.17-2.39"/>
+          <path d="M10.71 5.05A16 16 0 0122.56 9"/>
+          <path d="M1.42 9a15.91 15.91 0 014.7-2.88"/>
+          <path d="M8.53 16.11a6 6 0 016.95 0"/>
+          <line x1="12" y1="20" x2="12.01" y2="20"/>
+        </svg>
+      </div>
+      <div class="status-label" id="status-label">Offline</div>
+      <div class="status-sub" id="status-sub">You are not visible to customers.<br>Tap Go Online to start broadcasting.</div>
+      <button class="toggle-btn go-online" id="toggle-btn">
+        <svg viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0114.08 0"/><path d="M1.42 9a16 16 0 0121.16 0"/><path d="M8.53 16.11a6 6 0 016.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+        Go Online
+      </button>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon">⏱</div>
+        <div class="stat-val" id="stat-time">0 min</div>
+        <div class="stat-lbl">Session time</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📡</div>
+        <div class="stat-val" id="stat-pings">0</div>
+        <div class="stat-lbl">Location updates</div>
+      </div>
+    </div>
+
+    <div class="loc-card">
+      <div class="loc-icon">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+      </div>
+      <div class="loc-text">
+        <div class="loc-title">Current Location</div>
+        <div class="loc-coords" id="loc-coords">Waiting for GPS…</div>
+      </div>
+      <div class="loc-pill inactive" id="loc-pill">GPS</div>
+    </div>
+
+    <div class="map-card">
+      <div id="mini-map"></div>
+      <div class="map-lbl">Your position</div>
+    </div>
+
+    <div class="change-name" id="change-name-btn">Change name</div>
+
+  </div>
+</div>
+
+<script>
+// ── Persistent identity ──────────────────────────────────────────────
+let driverName = localStorage.getItem('tx_driver_name');
+let driverId   = localStorage.getItem('tx_driver_id');
+if (!driverId) {
+  driverId = 'drv-' + Math.random().toString(36).slice(2, 9);
+  localStorage.setItem('tx_driver_id', driverId);
+}
+
+let isOnline     = false;
+let sessionStart = null;
+let pingCount    = 0;
+let socket       = null;
+let miniMap      = null;
+let miniMarker   = null;
+let myLat = null, myLng = null;
+
+// ── Name prompt ──────────────────────────────────────────────────────
+function showNamePrompt() {
+  document.getElementById('name-overlay').classList.remove('hidden');
+  setTimeout(() => document.getElementById('name-input').focus(), 100);
+}
+function hideNamePrompt() {
+  document.getElementById('name-overlay').classList.add('hidden');
+}
+
+document.getElementById('name-btn').addEventListener('click', saveName);
+document.getElementById('name-input').addEventListener('keydown', e => { if (e.key === 'Enter') saveName(); });
+
+function saveName() {
+  const val = document.getElementById('name-input').value.trim();
+  if (!val) { document.getElementById('name-input').style.borderColor = '#EF4444'; return; }
+  driverName = val;
+  localStorage.setItem('tx_driver_name', driverName);
+  hideNamePrompt();
+  boot();
+}
+
+document.getElementById('change-name-btn').addEventListener('click', () => {
+  if (isOnline) goOffline();
+  document.getElementById('name-input').value = driverName || '';
+  showNamePrompt();
+});
+
+// ── Boot ─────────────────────────────────────────────────────────────
+function boot() {
+  const ini = driverName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
+  document.getElementById('dash-avatar').textContent = ini;
+  document.getElementById('dash-name').textContent   = driverName;
+  document.getElementById('dash-id').textContent     = 'ID: ' + driverId;
+  initMiniMap();
+  startGPS();
+  connectSocket();
+  setInterval(tickSession, 15000);
+}
+
+if (driverName) {
+  hideNamePrompt();
+  boot();
+} else {
+  showNamePrompt();
+}
+
+// ── Socket.IO ────────────────────────────────────────────────────────
+function connectSocket() {
+  socket = io({ path: '/socket.io' });
+  socket.on('connect',    () => setConn('ok', 'Connected'));
+  socket.on('disconnect', () => { setConn('err', 'Reconnecting…'); });
+  socket.on('reconnect',  () => {
+    setConn('ok', 'Connected');
+    if (isOnline) socket.emit('driver:online', { driverId, name: driverName, lat: myLat || 0, lng: myLng || 0 });
+  });
+}
+
+// ── Toggle ───────────────────────────────────────────────────────────
+document.getElementById('toggle-btn').addEventListener('click', () => {
+  isOnline ? goOffline() : goOnline();
+});
+
+function goOnline() {
+  if (!socket?.connected) { alert('Not connected to server yet — please wait a moment.'); return; }
+  sessionStart = Date.now();
+  pingCount    = 0;
+  socket.emit('driver:online', { driverId, name: driverName, lat: myLat || 0, lng: myLng || 0 });
+  setOnlineUI(true);
+}
+
+function goOffline() {
+  if (socket?.connected) socket.emit('driver:offline', { driverId });
+  setOnlineUI(false);
+}
+
+function setOnlineUI(online) {
+  isOnline = online;
+  const card = document.getElementById('status-card');
+  const ind  = document.getElementById('status-indicator');
+  const lbl  = document.getElementById('status-label');
+  const sub  = document.getElementById('status-sub');
+  const btn  = document.getElementById('toggle-btn');
+
+  if (online) {
+    card.className = 'status-card online';
+    ind.className  = 'status-indicator online';
+    ind.innerHTML  = '<svg viewBox="0 0 24 24" style="width:30px;height:30px;fill:none;stroke:#10B981;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round"><path d="M5 12.55a11 11 0 0114.08 0"/><path d="M1.42 9a16 16 0 0121.16 0"/><path d="M8.53 16.11a6 6 0 016.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>';
+    lbl.textContent = 'Online';
+    sub.innerHTML   = 'You are live — customers can see you.<br>Location is broadcasting every few seconds.';
+    btn.className   = 'toggle-btn go-offline';
+    btn.innerHTML   = '<svg viewBox="0 0 24 24"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0119 12.55"/><path d="M5 12.55a10.94 10.94 0 015.17-2.39"/><path d="M10.71 5.05A16 16 0 0122.56 9"/><path d="M1.42 9a15.91 15.91 0 014.7-2.88"/><path d="M8.53 16.11a6 6 0 016.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg> Go Offline';
+  } else {
+    card.className = 'status-card offline';
+    ind.className  = 'status-indicator offline';
+    ind.innerHTML  = '<svg viewBox="0 0 24 24" style="width:30px;height:30px;fill:none;stroke:#6B7280;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0119 12.55"/><path d="M5 12.55a10.94 10.94 0 015.17-2.39"/><path d="M10.71 5.05A16 16 0 0122.56 9"/><path d="M1.42 9a15.91 15.91 0 014.7-2.88"/><path d="M8.53 16.11a6 6 0 016.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>';
+    lbl.textContent = 'Offline';
+    sub.innerHTML   = 'You are not visible to customers.<br>Tap Go Online to start broadcasting.';
+    btn.className   = 'toggle-btn go-online';
+    btn.innerHTML   = '<svg viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0114.08 0"/><path d="M1.42 9a16 16 0 0121.16 0"/><path d="M8.53 16.11a6 6 0 016.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg> Go Online';
+  }
+}
+
+// ── GPS ──────────────────────────────────────────────────────────────
+function startGPS() {
+  if (!navigator.geolocation) { document.getElementById('loc-coords').textContent = 'GPS not available'; return; }
+  navigator.geolocation.watchPosition(onPos, null, { enableHighAccuracy: true, maximumAge: 3000 });
+}
+
+function onPos({ coords }) {
+  myLat = coords.latitude; myLng = coords.longitude;
+  document.getElementById('loc-coords').textContent = myLat.toFixed(5) + ', ' + myLng.toFixed(5);
+  document.getElementById('loc-pill').className = 'loc-pill active';
+  document.getElementById('loc-pill').textContent = '±' + Math.round(coords.accuracy || 0) + 'm';
+
+  if (miniMap) {
+    if (!miniMarker) {
+      miniMarker = L.circleMarker([myLat, myLng], { radius: 8, color: '#1A56DB', fillColor: '#1A56DB', fillOpacity: 1, weight: 3 }).addTo(miniMap);
+      miniMap.setView([myLat, myLng], 15);
+    } else {
+      miniMarker.setLatLng([myLat, myLng]);
+      miniMap.panTo([myLat, myLng], { animate: true });
+    }
+  }
+
+  if (isOnline && socket?.connected) {
+    socket.emit('driver:location', { driverId, lat: myLat, lng: myLng, heading: coords.heading ?? null, speed: coords.speed ?? null });
+    pingCount++;
+    document.getElementById('stat-pings').textContent = pingCount;
+  }
+}
+
+// ── Mini map ─────────────────────────────────────────────────────────
+function initMiniMap() {
+  miniMap = L.map('mini-map', { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, touchZoom: false }).setView([54.5, -3.2], 12);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 19 }).addTo(miniMap);
+}
+
+// ── Session timer ─────────────────────────────────────────────────────
+function tickSession() {
+  if (!isOnline || !sessionStart) { document.getElementById('stat-time').textContent = '0 min'; return; }
+  const m = Math.floor((Date.now() - sessionStart) / 60000);
+  document.getElementById('stat-time').textContent = m < 60 ? m + ' min' : Math.floor(m/60) + 'h ' + (m%60) + 'm';
+}
+
+function setConn(s, t) {
+  const el = document.getElementById('conn-badge');
+  el.className = 'conn-badge ' + s;
+  document.getElementById('conn-label').textContent = t;
+}
+
+window.addEventListener('beforeunload', () => { if (isOnline) goOffline(); });
+</script>
+</body>
+</html>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   

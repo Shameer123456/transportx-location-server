@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>TransportX — Find a Driver</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --primary:#1A56DB;--accent:#0EA5E9;--green:#10B981;--red:#EF4444;--warn:#F59E0B;
+  --bg:#F9FAFB;--card:#FFFFFF;--border:#E5E7EB;--text:#111827;--muted:#6B7280;--light:#F3F4F6;
+  --shadow:0 4px 24px rgba(0,0,0,.10),0 1px 4px rgba(0,0,0,.06);
+  --shadow-lg:0 12px 48px rgba(0,0,0,.15),0 4px 16px rgba(0,0,0,.08);
+}
+html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,-apple-system,sans-serif}
+#map{position:absolute;inset:0}
+
+/* top bar */
+.topbar{position:absolute;top:14px;left:14px;right:14px;z-index:500;display:flex;align-items:center;gap:10px;pointer-events:none}
+.topbar>*{pointer-events:all}
+.tb-logo{background:var(--card);border-radius:50px;padding:9px 16px 9px 12px;display:flex;align-items:center;gap:8px;box-shadow:var(--shadow);font-weight:800;font-size:.9rem;color:var(--text)}
+.tb-logo-dot{width:28px;height:28px;border-radius:10px;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center}
+.tb-logo-dot svg{width:15px;height:15px;fill:none;stroke:#fff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.spacer{flex:1;pointer-events:none}
+.driver-count-badge{background:var(--card);border-radius:50px;padding:8px 14px;box-shadow:var(--shadow);font-size:.8rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px}
+.count-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0}
+.count-dot.pulse{animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+
+/* srv status */
+.srv-pill{background:var(--card);border-radius:50px;padding:7px 13px;box-shadow:var(--shadow);font-size:.75rem;font-weight:600;display:flex;align-items:center;gap:6px;transition:all .3s}
+.srv-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--muted)}
+.srv-pill.ok .dot{background:var(--green);animation:pulse 2s infinite}
+.srv-pill.ok{color:var(--green)}
+.srv-pill.err{color:var(--red)}
+.srv-pill.err .dot{background:var(--red)}
+
+/* my location button */
+.locate-btn{position:absolute;bottom:200px;right:14px;z-index:500;width:44px;height:44px;border-radius:14px;background:var(--card);border:none;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s}
+.locate-btn:hover{box-shadow:var(--shadow-lg);transform:scale(1.05)}
+.locate-btn svg{width:20px;height:20px;fill:none;stroke:var(--primary);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* driver marker styles (injected via CSS) */
+.driver-marker-wrap{display:flex;flex-direction:column;align-items:center;cursor:pointer}
+.driver-marker-circle{width:46px;height:46px;border-radius:50%;border:3px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.25),0 0 0 5px rgba(26,86,219,.15);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.78rem;color:#fff;font-family:'Segoe UI',sans-serif;background:var(--primary);transition:transform .15s}
+.driver-marker-circle:hover{transform:scale(1.12)}
+.driver-marker-label{background:var(--primary);color:#fff;font-size:.58rem;font-weight:700;padding:2px 8px;border-radius:4px;margin-top:3px;font-family:'Segoe UI',sans-serif;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+
+/* customer dot */
+.me-dot{width:18px;height:18px;border-radius:50%;background:var(--primary);border:3px solid #fff;box-shadow:0 0 0 6px rgba(26,86,219,.2),0 4px 12px rgba(0,0,0,.2)}
+
+/* ── Bottom sheet ── */
+.sheet-backdrop{position:absolute;inset:0;z-index:600;background:rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .25s}
+.sheet-backdrop.visible{opacity:1;pointer-events:all}
+
+.sheet{position:absolute;bottom:0;left:0;right:0;z-index:601;background:var(--card);border-radius:24px 24px 0 0;padding:0 0 env(safe-area-inset-bottom,16px);box-shadow:0 -8px 48px rgba(0,0,0,.15);transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
+.sheet.open{transform:translateY(0)}
+
+.sheet-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 0}
+
+.sheet-content{padding:20px 22px 24px}
+
+.sheet-driver-row{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+.sheet-avatar{width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:800;color:#fff;flex-shrink:0;font-family:'Segoe UI',sans-serif}
+.sheet-driver-info{flex:1}
+.sheet-driver-name{font-size:1.15rem;font-weight:800;color:var(--text);line-height:1.2}
+.sheet-online-badge{display:inline-flex;align-items:center;gap:5px;margin-top:4px;font-size:.75rem;font-weight:600;color:var(--green)}
+.sheet-online-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+
+.sheet-stats{display:flex;gap:0;margin-bottom:20px;background:var(--light);border-radius:14px;overflow:hidden}
+.sheet-stat{flex:1;padding:12px 10px;text-align:center;border-right:1px solid var(--border)}
+.sheet-stat:last-child{border-right:none}
+.sheet-stat-val{font-size:1rem;font-weight:800;color:var(--text)}
+.sheet-stat-lbl{font-size:.68rem;color:var(--muted);margin-top:2px}
+.sheet-stat-val.loading{color:var(--muted);font-size:.8rem}
+
+.sheet-actions{display:flex;gap:10px}
+.sheet-btn{flex:1;padding:14px 10px;border-radius:14px;border:none;font-size:.88rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s;font-family:'Segoe UI',sans-serif}
+.sheet-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.sheet-btn.navigate{background:var(--primary);color:#fff;box-shadow:0 4px 16px rgba(26,86,219,.35)}
+.sheet-btn.navigate:hover{background:#1347c8;box-shadow:0 6px 20px rgba(26,86,219,.45)}
+.sheet-btn.navigate:active{transform:scale(.97)}
+.sheet-btn.chat{background:var(--light);color:var(--text);border:1.5px solid var(--border)}
+.sheet-btn.chat:hover{background:var(--border);border-color:var(--muted)}
+.sheet-btn.chat:active{transform:scale(.97)}
+.sheet-btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+
+/* route compact bar (shown when route is drawn) */
+.route-bar{position:absolute;bottom:0;left:0;right:0;z-index:500;background:var(--card);padding:14px 18px calc(14px + env(safe-area-inset-bottom,0px));border-radius:20px 20px 0 0;box-shadow:0 -4px 24px rgba(0,0,0,.1);transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);display:flex;align-items:center;gap:14px}
+.route-bar.visible{transform:translateY(0)}
+.route-info{flex:1}
+.route-info strong{font-size:1rem;font-weight:800;color:var(--text)}
+.route-info span{font-size:.82rem;color:var(--muted);display:block;margin-top:1px}
+.route-close{padding:9px 16px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--muted);font-size:.82rem;font-weight:700;cursor:pointer;font-family:'Segoe UI',sans-serif;white-space:nowrap}
+.route-close:hover{border-color:var(--text);color:var(--text)}
+
+/* no drivers notice */
+.no-drivers-notice{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);z-index:500;background:var(--card);border-radius:14px;padding:14px 20px;box-shadow:var(--shadow);font-size:.82rem;color:var(--muted);white-space:nowrap;display:none}
+
+/* leaflet overrides */
+.leaflet-control-zoom{border:none!important;box-shadow:var(--shadow)!important}
+.leaflet-control-zoom a{background:var(--card)!important;color:var(--text)!important;border:none!important;border-bottom:1px solid var(--border)!important;width:36px!important;height:36px!important;line-height:36px!important}
+.leaflet-control-zoom a:hover{color:var(--primary)!important}
+.leaflet-bar{border-radius:12px!important;overflow:hidden}
+.leaflet-control-attribution{background:rgba(255,255,255,.75)!important;backdrop-filter:blur(4px);border-radius:8px 0 0 0!important;font-size:.6rem!important}
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div class="topbar">
+  <div class="tb-logo">
+    <div class="tb-logo-dot">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    </div>
+    TransportX
+  </div>
+  <div class="spacer"></div>
+  <div class="driver-count-badge" id="driver-count-badge">
+    <span class="count-dot" id="count-dot"></span>
+    <span id="count-label">Looking…</span>
+  </div>
+  <div class="srv-pill err" id="srv-pill">
+    <span class="dot"></span><span id="srv-label">Connecting</span>
+  </div>
+</div>
+
+<button class="locate-btn" id="locate-btn" title="Centre on my location">
+  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8" stroke-dasharray="4 2"/></svg>
+</button>
+
+<div class="sheet-backdrop" id="backdrop"></div>
+
+<div class="sheet" id="driver-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-content">
+    <div class="sheet-driver-row">
+      <div class="sheet-avatar" id="sheet-avatar">?</div>
+      <div class="sheet-driver-info">
+        <div class="sheet-driver-name" id="sheet-name">—</div>
+        <div class="sheet-online-badge"><span class="dot"></span> Online Now</div>
+      </div>
+    </div>
+    <div class="sheet-stats">
+      <div class="sheet-stat">
+        <div class="sheet-stat-val" id="stat-dist"><span class="loading">…</span></div>
+        <div class="sheet-stat-lbl">Distance</div>
+      </div>
+      <div class="sheet-stat">
+        <div class="sheet-stat-val" id="stat-eta"><span class="loading">…</span></div>
+        <div class="sheet-stat-lbl">ETA by road</div>
+      </div>
+    </div>
+    <div class="sheet-actions">
+      <button class="sheet-btn navigate" id="btn-navigate" disabled>
+        <svg viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+        Navigate
+      </button>
+      <button class="sheet-btn chat" id="btn-chat" disabled>
+        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        Chat
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="route-bar" id="route-bar">
+  <div class="route-info">
+    <strong id="route-label">—</strong>
+    <span id="route-sub">via fastest route</span>
+  </div>
+  <button class="route-close" id="route-close">✕ Clear</button>
+</div>
+
+<div class="no-drivers-notice" id="no-drivers">No drivers online right now</div>
+
+<script>
+// ── Config ──────────────────────────────────────────────────────────────
+const API = '';  // same origin
+
+// ── Map setup ───────────────────────────────────────────────────────────
+const map = L.map('map', { zoomControl: false }).setView([54.5, -3.2], 6);
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap © CARTO', maxZoom: 19, subdomains: 'abcd'
+}).addTo(map);
+
+// ── State ───────────────────────────────────────────────────────────────
+let sessionId   = sessionStorage.getItem('txSessionId');
+let myLat = null, myLng = null;
+let myMarker    = null;
+let myCircle    = null;
+let selectedDriver = null;  // { driverId, name, lat, lng }
+let routePolyline  = null;
+const driverMarkers = {};   // driverId → L.marker
+
+// ── Guest session ───────────────────────────────────────────────────────
+async function ensureSession() {
+  if (sessionId) {
+    const ok = await fetch(`${API}/api/sessions/${sessionId}`).then(r => r.ok);
+    if (ok) return;
+  }
+  const { sessionId: sid } = await fetch(`${API}/api/sessions`, { method: 'POST' }).then(r => r.json());
+  sessionId = sid;
+  sessionStorage.setItem('txSessionId', sessionId);
+}
+
+// ── Socket.IO ───────────────────────────────────────────────────────────
+const socket = io({ path: '/socket.io' });
+
+socket.on('connect', () => {
+  setSrv('ok', 'Live');
+  socket.emit('customer:join');
+});
+socket.on('disconnect', () => setSrv('err', 'Reconnecting…'));
+
+socket.on('drivers:initial', (drivers) => {
+  drivers.forEach(addOrUpdateDriver);
+  updateDriverCount();
+  if (drivers.length === 0) fitUK();
+  else fitDrivers(drivers);
+});
+
+socket.on('driver:online', (d) => {
+  addOrUpdateDriver(d);
+  updateDriverCount();
+});
+
+socket.on('driver:location', (d) => {
+  addOrUpdateDriver(d);
+  // Update sheet stats if this is the selected driver
+  if (selectedDriver?.driverId === d.driverId) {
+    selectedDriver.lat = d.lat;
+    selectedDriver.lng = d.lng;
+    fetchRouteStats(d.lat, d.lng);
+  }
+});
+
+socket.on('driver:offline', ({ driverId }) => {
+  removeDriver(driverId);
+  updateDriverCount();
+  if (selectedDriver?.driverId === driverId) closeSheet();
+});
+
+// ── Driver markers ──────────────────────────────────────────────────────
+function makeDriverIcon(name, color = '#1A56DB') {
+  const ini = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
+  return L.divIcon({
+    className: '',
+    html: `<div class="driver-marker-wrap">
+      <div class="driver-marker-circle" style="background:${color}">${ini}</div>
+      <div class="driver-marker-label" style="background:${color}">${name.length > 14 ? name.slice(0, 12) + '…' : name}</div>
+    </div>`,
+    iconSize:   [46, 64],
+    iconAnchor: [23, 60],
+    popupAnchor:[0, -60],
+  });
+}
+
+function addOrUpdateDriver({ driverId, name, lat, lng }) {
+  if (!lat || !lng) return;
+  if (driverMarkers[driverId]) {
+    driverMarkers[driverId].setLatLng([lat, lng]);
+    driverMarkers[driverId]._txData = { driverId, name, lat, lng };
+  } else {
+    const mkr = L.marker([lat, lng], { icon: makeDriverIcon(name) }).addTo(map);
+    mkr._txData = { driverId, name, lat, lng };
+    mkr.on('click', () => openSheet(mkr._txData));
+    driverMarkers[driverId] = mkr;
+  }
+  // hide no-drivers notice
+  document.getElementById('no-drivers').style.display = 'none';
+}
+
+function removeDriver(driverId) {
+  if (driverMarkers[driverId]) {
+    map.removeLayer(driverMarkers[driverId]);
+    delete driverMarkers[driverId];
+  }
+}
+
+function updateDriverCount() {
+  const n = Object.keys(driverMarkers).length;
+  const dot = document.getElementById('count-dot');
+  const lbl = document.getElementById('count-label');
+  if (n === 0) {
+    dot.classList.remove('pulse');
+    lbl.textContent = 'No drivers online';
+    document.getElementById('no-drivers').style.display = 'block';
+  } else {
+    dot.classList.add('pulse');
+    lbl.textContent = `${n} driver${n !== 1 ? 's' : ''} online`;
+  }
+}
+
+// ── Bottom sheet ────────────────────────────────────────────────────────
+function openSheet(driver) {
+  selectedDriver = driver;
+  clearRoute();
+
+  // Populate
+  const ini = driver.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
+  document.getElementById('sheet-avatar').textContent = ini;
+  document.getElementById('sheet-name').textContent   = driver.name;
+  document.getElementById('stat-dist').innerHTML = '<span class="loading">…</span>';
+  document.getElementById('stat-eta').innerHTML  = '<span class="loading">…</span>';
+  document.getElementById('btn-navigate').disabled = true;
+  document.getElementById('btn-chat').disabled     = false;
+
+  document.getElementById('driver-sheet').classList.add('open');
+  document.getElementById('backdrop').classList.add('visible');
+
+  // Fetch route stats if we have location
+  if (myLat !== null) fetchRouteStats(driver.lat, driver.lng);
+}
+
+function closeSheet() {
+  selectedDriver = null;
+  document.getElementById('driver-sheet').classList.remove('open');
+  document.getElementById('backdrop').classList.remove('visible');
+}
+
+document.getElementById('backdrop').addEventListener('click', closeSheet);
+
+// ── Route stats (OSRM) ──────────────────────────────────────────────────
+async function fetchRouteStats(toLat, toLng) {
+  if (myLat === null) {
+    document.getElementById('stat-dist').textContent = 'Enable location';
+    document.getElementById('stat-eta').textContent  = '—';
+    return;
+  }
+  try {
+    const res  = await fetch(`${API}/api/route?from=${myLat},${myLng}&to=${toLat},${toLng}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    document.getElementById('stat-dist').textContent = data.distance_label;
+    document.getElementById('stat-eta').textContent  = data.eta_label;
+    document.getElementById('btn-navigate').disabled = false;
+    document.getElementById('btn-navigate')._routeData = data;
+  } catch {
+    document.getElementById('stat-dist').textContent = 'N/A';
+    document.getElementById('stat-eta').textContent  = '—';
+  }
+}
+
+// ── Navigate button ─────────────────────────────────────────────────────
+document.getElementById('btn-navigate').addEventListener('click', async () => {
+  if (!selectedDriver) return;
+  const btn  = document.getElementById('btn-navigate');
+  const data = btn._routeData;
+  if (!data) return;
+
+  closeSheet();
+
+  // Draw route polyline from GeoJSON
+  clearRoute();
+  const coords = data.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+  routePolyline = L.polyline(coords, {
+    color: '#1A56DB', weight: 5, opacity: .85,
+    dashArray: null,
+  }).addTo(map);
+  map.flyToBounds(routePolyline.getBounds().pad(.15), { duration: 1.2 });
+
+  // Show compact route bar
+  document.getElementById('route-label').textContent = `${data.distance_label}  ·  ${data.eta_label}`;
+  document.getElementById('route-bar').classList.add('visible');
+});
+
+document.getElementById('route-close').addEventListener('click', clearRoute);
+
+function clearRoute() {
+  if (routePolyline) { map.removeLayer(routePolyline); routePolyline = null; }
+  document.getElementById('route-bar').classList.remove('visible');
+}
+
+// ── Chat button ─────────────────────────────────────────────────────────
+document.getElementById('btn-chat').addEventListener('click', async () => {
+  if (!selectedDriver) return;
+  await ensureSession();
+  const res = await fetch(`${API}/api/conversations`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ driverId: selectedDriver.driverId, sessionId }),
+  });
+  if (!res.ok) { alert('Could not start chat. Please try again.'); return; }
+  const { conversationId } = await res.json();
+  window.location.href = `/customer/chat.html?conv=${conversationId}&session=${sessionId}&driver=${encodeURIComponent(selectedDriver.name)}`;
+});
+
+// ── My location ─────────────────────────────────────────────────────────
+function setMyLocation(lat, lng, accuracy) {
+  myLat = lat; myLng = lng;
+  if (!myMarker) {
+    myMarker = L.marker([lat, lng], {
+      icon: L.divIcon({ className: '', html: '<div class="me-dot"></div>', iconSize: [18,18], iconAnchor: [9,9] }),
+      zIndexOffset: -100,
+    }).addTo(map);
+    myCircle = L.circle([lat, lng], { radius: accuracy || 0, color: '#1A56DB', fillColor: '#1A56DB', fillOpacity: .07, weight: 1.5 }).addTo(map);
+    map.flyTo([lat, lng], 13, { duration: 1.5 });
+  } else {
+    myMarker.setLatLng([lat, lng]);
+    if (myCircle) myCircle.setLatLng([lat, lng]).setRadius(accuracy || 0);
+  }
+}
+
+function startWatchingLocation() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.watchPosition(
+    ({ coords }) => setMyLocation(coords.latitude, coords.longitude, coords.accuracy),
+    null,
+    { enableHighAccuracy: true, maximumAge: 5000 }
+  );
+}
+
+document.getElementById('locate-btn').addEventListener('click', () => {
+  if (myLat !== null) map.flyTo([myLat, myLng], 14, { duration: 1.2 });
+  else startWatchingLocation();
+});
+
+// ── Helpers ─────────────────────────────────────────────────────────────
+function setSrv(s, t) {
+  const el = document.getElementById('srv-pill');
+  el.className = `srv-pill ${s}`;
+  document.getElementById('srv-label').textContent = t;
+}
+
+function fitUK() { map.setView([54.5, -3.2], 6); }
+
+function fitDrivers(drivers) {
+  if (!drivers.length) return;
+  const lls = drivers.filter(d => d.lat && d.lng).map(d => [d.lat, d.lng]);
+  if (lls.length === 1) map.flyTo(lls[0], 12, { duration: 1.2 });
+  else if (lls.length > 1) map.flyToBounds(L.latLngBounds(lls).pad(.3), { duration: 1.5 });
+}
+
+// ── Boot ─────────────────────────────────────────────────────────────────
+ensureSession();
+startWatchingLocation();
+</script>
+</body>
+</html>

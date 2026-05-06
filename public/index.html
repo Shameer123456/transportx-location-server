@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>TransportX</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,-apple-system,sans-serif}
+
+/* map background */
+#bg-map{position:absolute;inset:0;z-index:0;filter:brightness(.55) saturate(.7)}
+
+/* overlay */
+.overlay{position:absolute;inset:0;z-index:1;background:linear-gradient(160deg,rgba(17,24,39,.72) 0%,rgba(17,24,39,.55) 100%);backdrop-filter:blur(1px)}
+
+/* centred layout */
+.stage{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+
+/* logo */
+.logo{display:flex;align-items:center;gap:12px;margin-bottom:48px}
+.logo-icon{width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,#1A56DB,#0EA5E9);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(26,86,219,.45);flex-shrink:0}
+.logo-icon svg{width:28px;height:28px;fill:none;stroke:#fff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.logo-text{color:#fff}
+.logo-text h1{font-size:1.9rem;font-weight:800;letter-spacing:-.02em;line-height:1}
+.logo-text p{font-size:.85rem;color:rgba(255,255,255,.6);margin-top:3px;font-weight:400}
+
+/* cards container */
+.cards{display:flex;gap:16px;width:100%;max-width:520px}
+
+/* role card */
+.card{flex:1;background:rgba(255,255,255,.97);border-radius:24px;padding:28px 22px;cursor:pointer;text-decoration:none;display:flex;flex-direction:column;align-items:center;gap:14px;box-shadow:0 20px 60px rgba(0,0,0,.25),0 4px 16px rgba(0,0,0,.12);transition:transform .18s ease,box-shadow .18s ease;border:2px solid transparent}
+.card:hover{transform:translateY(-5px);box-shadow:0 28px 72px rgba(0,0,0,.3),0 4px 20px rgba(0,0,0,.15)}
+.card:active{transform:translateY(-2px)}
+
+.card-icon{width:62px;height:62px;border-radius:18px;display:flex;align-items:center;justify-content:center}
+.card-icon svg{width:32px;height:32px;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.card.driver .card-icon{background:linear-gradient(135deg,#1A56DB15,#1A56DB25)}
+.card.driver .card-icon svg{stroke:#1A56DB}
+.card.driver:hover{border-color:#1A56DB30}
+
+.card.customer .card-icon{background:linear-gradient(135deg,#0EA5E915,#0EA5E925)}
+.card.customer .card-icon svg{stroke:#0EA5E9}
+.card.customer:hover{border-color:#0EA5E930}
+
+.card-title{font-size:1.1rem;font-weight:800;color:#111827;text-align:center;letter-spacing:-.01em}
+.card-desc{font-size:.8rem;color:#6B7280;text-align:center;line-height:1.5;font-weight:400}
+
+.card-cta{margin-top:4px;padding:10px 20px;border-radius:50px;font-size:.82rem;font-weight:700;letter-spacing:.01em;transition:all .15s}
+.card.driver .card-cta{background:#1A56DB;color:#fff}
+.card.driver:hover .card-cta{background:#1347c8}
+.card.customer .card-cta{background:#0EA5E9;color:#fff}
+.card.customer:hover .card-cta{background:#0992d0}
+
+/* tagline */
+.tagline{margin-top:36px;color:rgba(255,255,255,.4);font-size:.75rem;letter-spacing:.04em;text-transform:uppercase}
+
+@media(max-width:480px){
+  .cards{flex-direction:column;max-width:320px}
+  .logo{margin-bottom:36px}
+}
+</style>
+</head>
+<body>
+<div id="bg-map"></div>
+<div class="overlay"></div>
+
+<div class="stage">
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    </div>
+    <div class="logo-text">
+      <h1>TransportX</h1>
+      <p>Real-time driver dispatch</p>
+    </div>
+  </div>
+
+  <div class="cards">
+    <a class="card driver" href="/driver/">
+      <div class="card-icon">
+        <!-- truck icon -->
+        <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+      </div>
+      <div class="card-title">I am a Driver</div>
+      <div class="card-desc">Go online, share your location and connect with customers in real time</div>
+      <div class="card-cta">Driver Dashboard →</div>
+    </a>
+
+    <a class="card customer" href="/customer/">
+      <div class="card-icon">
+        <!-- map pin icon -->
+        <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      </div>
+      <div class="card-title">I need a Driver</div>
+      <div class="card-desc">Find available drivers near you, get directions and chat directly</div>
+      <div class="card-cta">Find a Driver →</div>
+    </a>
+  </div>
+
+  <div class="tagline">Live · Reliable · Connected</div>
+</div>
+
+<script>
+// Subtle blurred map background
+const map = L.map('bg-map', { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, touchZoom: false, keyboard: false }).setView([54.5, -3.2], 7);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { subdomains: 'abcd' }).addTo(map);
+</script>
+</body>
+</html>

@@ -10,7 +10,7 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --primary:#1A56DB;--accent:#0EA5E9;--green:#10B981;--red:#EF4444;--warn:#F59E0B;
+  --primary:#1A56DB;--accent:#0EA5E9;--green:#10B981;--red:#EF4444;--amber:#F59E0B;
   --bg:#F9FAFB;--card:#FFFFFF;--border:#E5E7EB;--text:#111827;--muted:#6B7280;--light:#F3F4F6;
   --shadow:0 4px 24px rgba(0,0,0,.10),0 1px 4px rgba(0,0,0,.06);
   --shadow-lg:0 12px 48px rgba(0,0,0,.15),0 4px 16px rgba(0,0,0,.08);
@@ -18,7 +18,7 @@
 html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,-apple-system,sans-serif}
 #map{position:absolute;inset:0}
 
-/* top bar */
+/* ── top bar ── */
 .topbar{position:absolute;top:14px;left:14px;right:14px;z-index:500;display:flex;align-items:center;gap:10px;pointer-events:none}
 .topbar>*{pointer-events:all}
 .tb-logo{background:var(--card);border-radius:50px;padding:9px 16px 9px 12px;display:flex;align-items:center;gap:8px;box-shadow:var(--shadow);font-weight:800;font-size:.9rem;color:var(--text)}
@@ -29,8 +29,6 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,-apple-sy
 .count-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0}
 .count-dot.pulse{animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
-
-/* srv status */
 .srv-pill{background:var(--card);border-radius:50px;padding:7px 13px;box-shadow:var(--shadow);font-size:.75rem;font-weight:600;display:flex;align-items:center;gap:6px;transition:all .3s}
 .srv-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--muted)}
 .srv-pill.ok .dot{background:var(--green);animation:pulse 2s infinite}
@@ -38,57 +36,76 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,-apple-sy
 .srv-pill.err{color:var(--red)}
 .srv-pill.err .dot{background:var(--red)}
 
-/* my location button */
-.locate-btn{position:absolute;bottom:200px;right:14px;z-index:500;width:44px;height:44px;border-radius:14px;background:var(--card);border:none;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s}
-.locate-btn:hover{box-shadow:var(--shadow-lg);transform:scale(1.05)}
-.locate-btn svg{width:20px;height:20px;fill:none;stroke:var(--primary);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+/* ── floating buttons (right side) ── */
+.fab-col{position:absolute;bottom:200px;right:14px;z-index:500;display:flex;flex-direction:column;gap:10px}
+.fab{width:44px;height:44px;border-radius:14px;background:var(--card);border:none;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;font-size:1.1rem}
+.fab:hover{box-shadow:var(--shadow-lg);transform:scale(1.05)}
+.fab svg{width:20px;height:20px;fill:none;stroke:var(--primary);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
-/* driver marker styles (injected via CSS) */
+/* ── post job button ── */
+.post-job-btn{position:absolute;bottom:200px;left:14px;z-index:500;background:var(--amber);color:#fff;border:none;border-radius:16px;padding:12px 18px;font-size:.85rem;font-weight:700;box-shadow:0 4px 16px rgba(245,158,11,.4);cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .15s;font-family:'Segoe UI',sans-serif}
+.post-job-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(245,158,11,.45)}
+
+/* ── driver markers ── */
 .driver-marker-wrap{display:flex;flex-direction:column;align-items:center;cursor:pointer}
-.driver-marker-circle{width:46px;height:46px;border-radius:50%;border:3px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.25),0 0 0 5px rgba(26,86,219,.15);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.78rem;color:#fff;font-family:'Segoe UI',sans-serif;background:var(--primary);transition:transform .15s}
+.driver-marker-circle{width:46px;height:46px;border-radius:50%;border:3px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.25),0 0 0 5px rgba(26,86,219,.15);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.78rem;color:#fff;background:var(--primary);transition:transform .15s}
 .driver-marker-circle:hover{transform:scale(1.12)}
-.driver-marker-label{background:var(--primary);color:#fff;font-size:.58rem;font-weight:700;padding:2px 8px;border-radius:4px;margin-top:3px;font-family:'Segoe UI',sans-serif;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.driver-marker-label{background:var(--primary);color:#fff;font-size:.58rem;font-weight:700;padding:2px 8px;border-radius:4px;margin-top:3px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.2)}
 
-/* customer dot */
+/* ── job markers ── */
+.job-marker-wrap{display:flex;flex-direction:column;align-items:center;cursor:pointer}
+.job-marker-circle{width:42px;height:42px;border-radius:12px;border:3px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.25),0 0 0 5px rgba(245,158,11,.2);display:flex;align-items:center;justify-content:center;font-size:1.1rem;background:var(--amber);transition:transform .15s}
+.job-marker-circle:hover{transform:scale(1.12)}
+.job-marker-label{background:var(--amber);color:#fff;font-size:.58rem;font-weight:700;padding:2px 8px;border-radius:4px;margin-top:3px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.2);max-width:90px;overflow:hidden;text-overflow:ellipsis}
+
+/* ── my location dot ── */
 .me-dot{width:18px;height:18px;border-radius:50%;background:var(--primary);border:3px solid #fff;box-shadow:0 0 0 6px rgba(26,86,219,.2),0 4px 12px rgba(0,0,0,.2)}
 
-/* ── Bottom sheet ── */
+/* ── sheet ── */
 .sheet-backdrop{position:absolute;inset:0;z-index:600;background:rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .25s}
 .sheet-backdrop.visible{opacity:1;pointer-events:all}
-
 .sheet{position:absolute;bottom:0;left:0;right:0;z-index:601;background:var(--card);border-radius:24px 24px 0 0;padding:0 0 env(safe-area-inset-bottom,16px);box-shadow:0 -8px 48px rgba(0,0,0,.15);transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
 .sheet.open{transform:translateY(0)}
-
 .sheet-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 0}
-
 .sheet-content{padding:20px 22px 24px}
 
-.sheet-driver-row{display:flex;align-items:center;gap:14px;margin-bottom:18px}
-.sheet-avatar{width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:800;color:#fff;flex-shrink:0;font-family:'Segoe UI',sans-serif}
-.sheet-driver-info{flex:1}
-.sheet-driver-name{font-size:1.15rem;font-weight:800;color:var(--text);line-height:1.2}
-.sheet-online-badge{display:inline-flex;align-items:center;gap:5px;margin-top:4px;font-size:.75rem;font-weight:600;color:var(--green)}
-.sheet-online-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+/* sheet header */
+.sheet-header{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.sheet-avatar{width:52px;height:52px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:800;color:#fff;flex-shrink:0}
+.sheet-avatar.driver{background:linear-gradient(135deg,var(--primary),var(--accent))}
+.sheet-avatar.job{background:linear-gradient(135deg,var(--amber),#f97316);font-size:1.4rem}
+.sheet-meta{flex:1;min-width:0}
+.sheet-title{font-size:1.15rem;font-weight:800;color:var(--text);line-height:1.2}
+.sheet-subtitle{font-size:.78rem;color:var(--muted);margin-top:3px;display:flex;align-items:center;gap:5px}
+.online-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;flex-shrink:0}
 
-.sheet-stats{display:flex;gap:0;margin-bottom:20px;background:var(--light);border-radius:14px;overflow:hidden}
-.sheet-stat{flex:1;padding:12px 10px;text-align:center;border-right:1px solid var(--border)}
-.sheet-stat:last-child{border-right:none}
-.sheet-stat-val{font-size:1rem;font-weight:800;color:var(--text)}
-.sheet-stat-lbl{font-size:.68rem;color:var(--muted);margin-top:2px}
-.sheet-stat-val.loading{color:var(--muted);font-size:.8rem}
+/* info rows */
+.sheet-info-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--light)}
+.sheet-info-row:last-of-type{border-bottom:none}
+.sheet-info-icon{font-size:1rem;flex-shrink:0;margin-top:1px}
+.sheet-info-text{flex:1;font-size:.88rem;color:var(--text);font-weight:500;line-height:1.4}
+.sheet-info-text small{display:block;color:var(--muted);font-size:.75rem;font-weight:400;margin-top:1px}
 
-.sheet-actions{display:flex;gap:10px}
-.sheet-btn{flex:1;padding:14px 10px;border-radius:14px;border:none;font-size:.88rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s;font-family:'Segoe UI',sans-serif}
-.sheet-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
-.sheet-btn.navigate{background:var(--primary);color:#fff;box-shadow:0 4px 16px rgba(26,86,219,.35)}
-.sheet-btn.navigate:hover{background:#1347c8;box-shadow:0 6px 20px rgba(26,86,219,.45)}
-.sheet-btn.navigate:active{transform:scale(.97)}
-.sheet-btn.chat{background:var(--light);color:var(--text);border:1.5px solid var(--border)}
-.sheet-btn.chat:hover{background:var(--border);border-color:var(--muted)}
-.sheet-btn.chat:active{transform:scale(.97)}
-.sheet-btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+/* stat pills */
+.sheet-stats{display:flex;gap:8px;margin:14px 0}
+.sheet-stat{flex:1;background:var(--light);border-radius:12px;padding:10px 8px;text-align:center}
+.sheet-stat-val{font-size:.95rem;font-weight:800;color:var(--text)}
+.sheet-stat-lbl{font-size:.65rem;color:var(--muted);margin-top:2px}
+.sheet-stat-val.loading{color:var(--muted);font-size:.75rem}
 
-/* route compact bar (shown when route is drawn) */
+/* action buttons */
+.sheet-actions{display:flex;gap:10px;margin-top:16px}
+.sheet-btn{flex:1;padding:14px 10px;border-radius:14px;border:none;font-size:.88rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .15s;font-family:'Segoe UI',sans-serif;text-decoration:none}
+.sheet-btn.primary{background:var(--primary);color:#fff;box-shadow:0 4px 16px rgba(26,86,219,.3)}
+.sheet-btn.primary:hover{background:#1347c8}
+.sheet-btn.call{background:#dcfce7;color:#16a34a}
+.sheet-btn.call:hover{background:#bbf7d0}
+.sheet-btn.amber{background:var(--amber);color:#fff;box-shadow:0 4px 14px rgba(245,158,11,.3)}
+.sheet-btn.amber:hover{background:#d97706}
+.sheet-btn:active{transform:scale(.97)}
+.sheet-btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+
+/* ── route bar ── */
 .route-bar{position:absolute;bottom:0;left:0;right:0;z-index:500;background:var(--card);padding:14px 18px calc(14px + env(safe-area-inset-bottom,0px));border-radius:20px 20px 0 0;box-shadow:0 -4px 24px rgba(0,0,0,.1);transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);display:flex;align-items:center;gap:14px}
 .route-bar.visible{transform:translateY(0)}
 .route-info{flex:1}
@@ -97,10 +114,28 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,-apple-sy
 .route-close{padding:9px 16px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--muted);font-size:.82rem;font-weight:700;cursor:pointer;font-family:'Segoe UI',sans-serif;white-space:nowrap}
 .route-close:hover{border-color:var(--text);color:var(--text)}
 
-/* no drivers notice */
-.no-drivers-notice{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);z-index:500;background:var(--card);border-radius:14px;padding:14px 20px;box-shadow:var(--shadow);font-size:.82rem;color:var(--muted);white-space:nowrap;display:none}
+/* ── modal overlay ── */
+.modal-overlay{position:absolute;inset:0;z-index:700;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+.modal-overlay.visible{opacity:1;pointer-events:all}
+.modal{background:var(--card);border-radius:24px 24px 0 0;padding:28px 24px calc(28px + env(safe-area-inset-bottom,0px));width:100%;max-width:600px;transform:translateY(40px);transition:transform .3s cubic-bezier(.4,0,.2,1)}
+.modal-overlay.visible .modal{transform:translateY(0)}
+.modal-title{font-size:1.2rem;font-weight:800;color:var(--text);margin-bottom:6px}
+.modal-sub{font-size:.82rem;color:var(--muted);margin-bottom:22px;line-height:1.5}
+.modal-label{font-size:.75rem;font-weight:700;color:var(--muted);letter-spacing:.5px;margin-bottom:6px;margin-top:14px}
+.modal-input{width:100%;background:var(--light);border:1.5px solid var(--border);border-radius:12px;padding:13px 16px;font-size:.95rem;color:var(--text);font-family:'Segoe UI',sans-serif;outline:none;transition:border-color .15s}
+.modal-input:focus{border-color:var(--primary)}
+.modal-input::placeholder{color:#9CA3AF}
+.modal-actions{display:flex;gap:10px;margin-top:22px}
+.modal-btn{flex:1;padding:14px;border-radius:14px;border:none;font-size:.9rem;font-weight:700;cursor:pointer;font-family:'Segoe UI',sans-serif;transition:all .15s}
+.modal-btn.primary{background:var(--amber);color:#fff;box-shadow:0 4px 14px rgba(245,158,11,.35)}
+.modal-btn.primary:hover{background:#d97706}
+.modal-btn.primary:disabled{opacity:.55;cursor:not-allowed}
+.modal-btn.secondary{background:var(--light);color:var(--muted)}
+.modal-btn.secondary:hover{background:var(--border)}
+.modal-error{font-size:.8rem;color:var(--red);margin-top:10px;display:none}
+.modal-error.visible{display:block}
 
-/* leaflet overrides */
+/* ── leaflet overrides ── */
 .leaflet-control-zoom{border:none!important;box-shadow:var(--shadow)!important}
 .leaflet-control-zoom a{background:var(--card)!important;color:var(--text)!important;border:none!important;border-bottom:1px solid var(--border)!important;width:36px!important;height:36px!important;line-height:36px!important}
 .leaflet-control-zoom a:hover{color:var(--primary)!important}
@@ -111,6 +146,7 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,-apple-sy
 <body>
 <div id="map"></div>
 
+<!-- Top bar -->
 <div class="topbar">
   <div class="tb-logo">
     <div class="tb-logo-dot">
@@ -128,45 +164,28 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,-apple-sy
   </div>
 </div>
 
-<button class="locate-btn" id="locate-btn" title="Centre on my location">
-  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8" stroke-dasharray="4 2"/></svg>
-</button>
-
-<div class="sheet-backdrop" id="backdrop"></div>
-
-<div class="sheet" id="driver-sheet">
-  <div class="sheet-handle"></div>
-  <div class="sheet-content">
-    <div class="sheet-driver-row">
-      <div class="sheet-avatar" id="sheet-avatar">?</div>
-      <div class="sheet-driver-info">
-        <div class="sheet-driver-name" id="sheet-name">—</div>
-        <div class="sheet-online-badge"><span class="dot"></span> Online Now</div>
-      </div>
-    </div>
-    <div class="sheet-stats">
-      <div class="sheet-stat">
-        <div class="sheet-stat-val" id="stat-dist"><span class="loading">…</span></div>
-        <div class="sheet-stat-lbl">Distance</div>
-      </div>
-      <div class="sheet-stat">
-        <div class="sheet-stat-val" id="stat-eta"><span class="loading">…</span></div>
-        <div class="sheet-stat-lbl">ETA by road</div>
-      </div>
-    </div>
-    <div class="sheet-actions">
-      <button class="sheet-btn navigate" id="btn-navigate" disabled>
-        <svg viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
-        Navigate
-      </button>
-      <button class="sheet-btn chat" id="btn-chat" disabled>
-        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-        Chat
-      </button>
-    </div>
-  </div>
+<!-- Floating action buttons (right) -->
+<div class="fab-col">
+  <button class="fab" id="locate-btn" title="Centre on my location">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8" stroke-dasharray="4 2"/></svg>
+  </button>
 </div>
 
+<!-- Post a job button (left) -->
+<button class="post-job-btn" id="post-job-btn">
+  <span>📦</span> Post a Job
+</button>
+
+<!-- Sheet backdrop -->
+<div class="sheet-backdrop" id="backdrop"></div>
+
+<!-- Universal bottom sheet -->
+<div class="sheet" id="main-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-content" id="sheet-content"></div>
+</div>
+
+<!-- Route bar -->
 <div class="route-bar" id="route-bar">
   <div class="route-info">
     <strong id="route-label">—</strong>
@@ -175,40 +194,45 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,-apple-sy
   <button class="route-close" id="route-close">✕ Clear</button>
 </div>
 
-<div class="no-drivers-notice" id="no-drivers">No drivers online right now</div>
+<!-- Post Job modal -->
+<div class="modal-overlay" id="post-modal">
+  <div class="modal">
+    <div class="modal-title">📦 Post a Job</div>
+    <div class="modal-sub">Drivers coming your way can see your job and call you directly.</div>
+    <div class="modal-label">PICKUP LOCATION</div>
+    <input class="modal-input" id="input-pickup" placeholder="e.g. Manchester" autocomplete="off"/>
+    <div class="modal-label">DROPOFF LOCATION</div>
+    <input class="modal-input" id="input-dropoff" placeholder="e.g. London" autocomplete="off"/>
+    <div class="modal-label">YOUR PHONE NUMBER</div>
+    <input class="modal-input" id="input-phone" placeholder="e.g. 07911 123456" type="tel" autocomplete="tel"/>
+    <div class="modal-label">DESCRIPTION <span style="font-weight:400;text-transform:none">(optional)</span></div>
+    <input class="modal-input" id="input-desc" placeholder="e.g. 2 pallets, available from 9am" autocomplete="off"/>
+    <div class="modal-error" id="modal-error"></div>
+    <div class="modal-actions">
+      <button class="modal-btn secondary" id="modal-cancel">Cancel</button>
+      <button class="modal-btn primary" id="modal-submit">Post Job</button>
+    </div>
+  </div>
+</div>
 
 <script>
-// ── Config ──────────────────────────────────────────────────────────────
-const API = '';  // same origin
-
-// ── Map setup ───────────────────────────────────────────────────────────
+// ── Map ──────────────────────────────────────────────────────────────────────
 const map = L.map('map', { zoomControl: false }).setView([54.5, -3.2], 6);
 L.control.zoom({ position: 'bottomright' }).addTo(map);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-  attribution: '© OpenStreetMap © CARTO', maxZoom: 19, subdomains: 'abcd'
+  attribution: '© OpenStreetMap © CARTO', maxZoom: 19, subdomains: 'abcd',
 }).addTo(map);
 
-// ── State ───────────────────────────────────────────────────────────────
-let sessionId   = sessionStorage.getItem('txSessionId');
+// ── State ────────────────────────────────────────────────────────────────────
 let myLat = null, myLng = null;
-let myMarker    = null;
-let myCircle    = null;
-let selectedDriver = null;  // { driverId, name, lat, lng }
-let routePolyline  = null;
-const driverMarkers = {};   // driverId → L.marker
+let myMarker = null, myCircle = null;
+let selectedItem      = null;   // { type: 'driver'|'job', data }
+let activeRouteLine   = null;   // leaflet polyline currently shown
+const driverMarkers   = {};     // driverId → L.marker
+const driverRouteLines = {};    // driverId → L.polyline (GPS → destination)
+const jobMarkers      = {};     // jobId    → L.marker
 
-// ── Guest session ───────────────────────────────────────────────────────
-async function ensureSession() {
-  if (sessionId) {
-    const ok = await fetch(`${API}/api/sessions/${sessionId}`).then(r => r.ok);
-    if (ok) return;
-  }
-  const { sessionId: sid } = await fetch(`${API}/api/sessions`, { method: 'POST' }).then(r => r.json());
-  sessionId = sid;
-  sessionStorage.setItem('txSessionId', sessionId);
-}
-
-// ── Socket.IO ───────────────────────────────────────────────────────────
+// ── Socket.IO ────────────────────────────────────────────────────────────────
 const socket = io({ path: '/socket.io' });
 
 socket.on('connect', () => {
@@ -218,196 +242,312 @@ socket.on('connect', () => {
 socket.on('disconnect', () => setSrv('err', 'Reconnecting…'));
 
 socket.on('drivers:initial', (drivers) => {
-  drivers.forEach(addOrUpdateDriver);
+  drivers.forEach(d => addOrUpdateDriver(d));
   updateDriverCount();
-  if (drivers.length === 0) fitUK();
-  else fitDrivers(drivers);
+  const valid = drivers.filter(d => d.lat && d.lng);
+  if (!valid.length) fitUK(); else fitDrivers(valid);
 });
-
-socket.on('driver:online', (d) => {
-  addOrUpdateDriver(d);
-  updateDriverCount();
-});
-
+socket.on('driver:online', (d) => { addOrUpdateDriver(d); updateDriverCount(); });
 socket.on('driver:location', (d) => {
-  addOrUpdateDriver(d);
-  // Update sheet stats if this is the selected driver
-  if (selectedDriver?.driverId === d.driverId) {
-    selectedDriver.lat = d.lat;
-    selectedDriver.lng = d.lng;
-    fetchRouteStats(d.lat, d.lng);
+  moveDriver(d);
+  if (selectedItem?.type === 'driver' && selectedItem.data.driverId === d.driverId) {
+    selectedItem.data.lat = d.lat;
+    selectedItem.data.lng = d.lng;
+    refreshDriverStats(d.lat, d.lng);
   }
 });
-
 socket.on('driver:offline', ({ driverId }) => {
   removeDriver(driverId);
   updateDriverCount();
-  if (selectedDriver?.driverId === driverId) closeSheet();
+  if (selectedItem?.type === 'driver' && selectedItem.data.driverId === driverId) closeSheet();
 });
 
-// ── REST polling fallback ───────────────────────────────────────────────
-// Catches drivers that registered after the initial socket handshake
-// (e.g. after a server restart or cold start on Render)
+socket.on('jobs:initial', (list) => list.forEach(addOrUpdateJob));
+socket.on('job:new', (job) => { addOrUpdateJob(job); });
+
+// REST fallback
 async function pollDrivers() {
   try {
-    const res = await fetch('/api/drivers/online');
-    if (!res.ok) return;
-    const list = await res.json();
-    list.forEach(d => {
-      if (d.lat || d.lng) addOrUpdateDriver({ driverId: d.driverId, name: d.name, lat: d.lat, lng: d.lng });
-    });
+    const list = await fetch('/api/drivers/online').then(r => r.json());
+    list.forEach(d => { if (d.lat || d.lng) addOrUpdateDriver(d); });
     updateDriverCount();
   } catch (_) {}
 }
-pollDrivers(); // run immediately on load
-setInterval(pollDrivers, 10000); // then every 10 seconds
+async function pollJobs() {
+  try {
+    const list = await fetch('/api/jobs').then(r => r.json());
+    list.forEach(addOrUpdateJob);
+  } catch (_) {}
+}
+pollDrivers(); pollJobs();
+setInterval(pollDrivers, 10_000);
 
-// ── Driver markers ──────────────────────────────────────────────────────
-function makeDriverIcon(name, color = '#1A56DB') {
-  const ini = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
+// ── Driver markers ────────────────────────────────────────────────────────────
+function makeDriverIcon(name) {
+  const ini = (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
   return L.divIcon({
     className: '',
     html: `<div class="driver-marker-wrap">
-      <div class="driver-marker-circle" style="background:${color}">${ini}</div>
-      <div class="driver-marker-label" style="background:${color}">${name.length > 14 ? name.slice(0, 12) + '…' : name}</div>
+      <div class="driver-marker-circle">${ini}</div>
+      <div class="driver-marker-label">${name.length > 14 ? name.slice(0, 12) + '…' : name}</div>
     </div>`,
-    iconSize:   [46, 64],
-    iconAnchor: [23, 60],
-    popupAnchor:[0, -60],
+    iconSize: [46, 64], iconAnchor: [23, 60],
   });
 }
 
-function addOrUpdateDriver({ driverId, name, lat, lng }) {
+function addOrUpdateDriver(d) {
+  const { driverId, name, phone, lat, lng, destination } = d;
   if (!lat || !lng) return;
+
   if (driverMarkers[driverId]) {
+    const existing = driverMarkers[driverId]._txData;
     driverMarkers[driverId].setLatLng([lat, lng]);
-    driverMarkers[driverId]._txData = { driverId, name, lat, lng };
+    driverMarkers[driverId]._txData = {
+      ...existing, lat, lng,
+      phone:       phone       !== undefined ? phone       : existing.phone,
+      destination: destination !== undefined ? destination : existing.destination,
+    };
   } else {
     const mkr = L.marker([lat, lng], { icon: makeDriverIcon(name) }).addTo(map);
-    mkr._txData = { driverId, name, lat, lng };
-    mkr.on('click', () => openSheet(mkr._txData));
+    mkr._txData = { driverId, name, phone: phone || null, lat, lng, destination: destination || null };
+    mkr.on('click', () => openDriverSheet(mkr._txData));
     driverMarkers[driverId] = mkr;
   }
-  // hide no-drivers notice
-  document.getElementById('no-drivers').style.display = 'none';
+
+  const data = driverMarkers[driverId]._txData;
+  drawDriverRoute(driverId, lat, lng, data.destination);
+  document.getElementById('post-job-btn').style.display = '';
+}
+
+// Location-only update (no phone/destination change)
+function moveDriver({ driverId, lat, lng }) {
+  if (!driverMarkers[driverId]) return;
+  driverMarkers[driverId].setLatLng([lat, lng]);
+  driverMarkers[driverId]._txData.lat = lat;
+  driverMarkers[driverId]._txData.lng = lng;
+  drawDriverRoute(driverId, lat, lng, driverMarkers[driverId]._txData.destination);
+}
+
+function drawDriverRoute(driverId, lat, lng, destination) {
+  if (driverRouteLines[driverId]) {
+    map.removeLayer(driverRouteLines[driverId]);
+    delete driverRouteLines[driverId];
+  }
+  if (destination?.lat && destination?.lng) {
+    driverRouteLines[driverId] = L.polyline(
+      [[lat, lng], [destination.lat, destination.lng]],
+      { color: '#1A56DB', weight: 2.5, opacity: 0.4, dashArray: '10 7' }
+    ).addTo(map);
+  }
 }
 
 function removeDriver(driverId) {
-  if (driverMarkers[driverId]) {
-    map.removeLayer(driverMarkers[driverId]);
-    delete driverMarkers[driverId];
-  }
+  if (driverMarkers[driverId])    { map.removeLayer(driverMarkers[driverId]);    delete driverMarkers[driverId]; }
+  if (driverRouteLines[driverId]) { map.removeLayer(driverRouteLines[driverId]); delete driverRouteLines[driverId]; }
 }
 
 function updateDriverCount() {
-  const n = Object.keys(driverMarkers).length;
+  const n   = Object.keys(driverMarkers).length;
   const dot = document.getElementById('count-dot');
   const lbl = document.getElementById('count-label');
-  if (n === 0) {
-    dot.classList.remove('pulse');
-    lbl.textContent = 'No drivers online';
-    document.getElementById('no-drivers').style.display = 'block';
-  } else {
-    dot.classList.add('pulse');
-    lbl.textContent = `${n} driver${n !== 1 ? 's' : ''} online`;
-  }
+  if (n === 0) { dot.classList.remove('pulse'); lbl.textContent = 'No drivers online'; }
+  else         { dot.classList.add('pulse');    lbl.textContent = `${n} driver${n !== 1 ? 's' : ''} online`; }
 }
 
-// ── Bottom sheet ────────────────────────────────────────────────────────
-function openSheet(driver) {
-  selectedDriver = driver;
+// ── Job markers ───────────────────────────────────────────────────────────────
+function makeJobIcon(name) {
+  const lbl = (name || 'Job').slice(0, 12);
+  return L.divIcon({
+    className: '',
+    html: `<div class="job-marker-wrap">
+      <div class="job-marker-circle">📦</div>
+      <div class="job-marker-label">${lbl}</div>
+    </div>`,
+    iconSize: [42, 62], iconAnchor: [21, 58],
+  });
+}
+
+function addOrUpdateJob(job) {
+  if (!job.pickup?.lat || !job.pickup?.lng) return;
+  if (jobMarkers[job.jobId]) return;  // already on map
+  const mkr = L.marker([job.pickup.lat, job.pickup.lng], { icon: makeJobIcon(job.pickup.name) }).addTo(map);
+  mkr._txData = job;
+  mkr.on('click', () => openJobSheet(mkr._txData));
+  jobMarkers[job.jobId] = mkr;
+}
+
+// ── Sheet ─────────────────────────────────────────────────────────────────────
+function openDriverSheet(driver) {
+  selectedItem = { type: 'driver', data: driver };
   clearRoute();
 
-  // Populate
-  const ini = driver.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
-  document.getElementById('sheet-avatar').textContent = ini;
-  document.getElementById('sheet-name').textContent   = driver.name;
-  document.getElementById('stat-dist').innerHTML = '<span class="loading">…</span>';
-  document.getElementById('stat-eta').innerHTML  = '<span class="loading">…</span>';
-  document.getElementById('btn-navigate').disabled = true;
-  document.getElementById('btn-chat').disabled     = false;
+  const ini = (driver.name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
+  const destHtml = driver.destination
+    ? `<div class="sheet-info-row">
+        <span class="sheet-info-icon">🗺️</span>
+        <div class="sheet-info-text">
+          Heading to <strong>${driver.destination.name}</strong>
+          <small>Route shown on map</small>
+        </div>
+       </div>`
+    : '';
 
-  document.getElementById('driver-sheet').classList.add('open');
+  const phoneHtml = driver.phone
+    ? `<div class="sheet-info-row">
+        <span class="sheet-info-icon">📞</span>
+        <div class="sheet-info-text">${driver.phone}</div>
+       </div>`
+    : '';
+
+  document.getElementById('sheet-content').innerHTML = `
+    <div class="sheet-header">
+      <div class="sheet-avatar driver">${ini}</div>
+      <div class="sheet-meta">
+        <div class="sheet-title">${driver.name}</div>
+        <div class="sheet-subtitle"><span class="online-dot"></span> Online now</div>
+      </div>
+    </div>
+    ${destHtml}
+    ${phoneHtml}
+    <div class="sheet-stats">
+      <div class="sheet-stat"><div class="sheet-stat-val loading" id="stat-dist">…</div><div class="sheet-stat-lbl">Distance to you</div></div>
+      <div class="sheet-stat"><div class="sheet-stat-val loading" id="stat-eta">…</div><div class="sheet-stat-lbl">Drive time</div></div>
+    </div>
+    <div class="sheet-actions">
+      ${driver.phone
+        ? `<a class="sheet-btn call" href="tel:${driver.phone}">
+            <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.11 1.18 2 2 0 012.11.01h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+            Call Driver
+           </a>`
+        : ''}
+      <button class="sheet-btn primary" id="btn-show-route">
+        <svg viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+        Show Route
+      </button>
+    </div>
+  `;
+
+  document.getElementById('btn-show-route').addEventListener('click', () => showRouteToDriver(driver));
+  showSheet();
+  if (myLat !== null) refreshDriverStats(driver.lat, driver.lng);
+}
+
+function openJobSheet(job) {
+  selectedItem = { type: 'job', data: job };
+  clearRoute();
+
+  document.getElementById('sheet-content').innerHTML = `
+    <div class="sheet-header">
+      <div class="sheet-avatar job">📦</div>
+      <div class="sheet-meta">
+        <div class="sheet-title">${job.pickup.name || 'Pickup'} → ${job.dropoff.name || 'Dropoff'}</div>
+        <div class="sheet-subtitle">Job Available</div>
+      </div>
+    </div>
+    <div class="sheet-info-row">
+      <span class="sheet-info-icon">📍</span>
+      <div class="sheet-info-text">
+        <strong>From:</strong> ${job.pickup.name || 'Unknown'}
+        <small><strong>To:</strong> ${job.dropoff.name || 'Unknown'}</small>
+      </div>
+    </div>
+    ${job.description
+      ? `<div class="sheet-info-row">
+          <span class="sheet-info-icon">📝</span>
+          <div class="sheet-info-text">${job.description}</div>
+         </div>`
+      : ''}
+    <div class="sheet-info-row">
+      <span class="sheet-info-icon">📞</span>
+      <div class="sheet-info-text">${job.phone}</div>
+    </div>
+    <div class="sheet-actions">
+      <a class="sheet-btn call" href="tel:${job.phone}">
+        <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.11 1.18 2 2 0 012.11.01h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+        Call Customer
+      </a>
+      <button class="sheet-btn amber" id="btn-show-job-route">
+        <svg viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+        Show Route
+      </button>
+    </div>
+  `;
+
+  document.getElementById('btn-show-job-route').addEventListener('click', () => showJobRoute(job));
+  showSheet();
+}
+
+function showSheet() {
+  document.getElementById('main-sheet').classList.add('open');
   document.getElementById('backdrop').classList.add('visible');
-
-  // Fetch route stats if we have location
-  if (myLat !== null) fetchRouteStats(driver.lat, driver.lng);
 }
 
 function closeSheet() {
-  selectedDriver = null;
-  document.getElementById('driver-sheet').classList.remove('open');
+  selectedItem = null;
+  document.getElementById('main-sheet').classList.remove('open');
   document.getElementById('backdrop').classList.remove('visible');
 }
 
 document.getElementById('backdrop').addEventListener('click', closeSheet);
 
-// ── Route stats (OSRM) ──────────────────────────────────────────────────
-async function fetchRouteStats(toLat, toLng) {
-  if (myLat === null) {
-    document.getElementById('stat-dist').textContent = 'Enable location';
-    document.getElementById('stat-eta').textContent  = '—';
-    return;
-  }
+// ── Route display ─────────────────────────────────────────────────────────────
+async function showRouteToDriver(driver) {
+  if (myLat === null) return;
+  closeSheet();
+  clearRoute();
   try {
-    const res  = await fetch(`${API}/api/route?from=${myLat},${myLng}&to=${toLat},${toLng}`);
+    const res  = await fetch(`/api/route?from=${myLat},${myLng}&to=${driver.lat},${driver.lng}`);
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
-    document.getElementById('stat-dist').textContent = data.distance_label;
-    document.getElementById('stat-eta').textContent  = data.eta_label;
-    document.getElementById('btn-navigate').disabled = false;
-    document.getElementById('btn-navigate')._routeData = data;
-  } catch {
-    document.getElementById('stat-dist').textContent = 'N/A';
-    document.getElementById('stat-eta').textContent  = '—';
-  }
+    if (!res.ok) return;
+    const coords  = data.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+    activeRouteLine = L.polyline(coords, { color: '#1A56DB', weight: 5, opacity: .85 }).addTo(map);
+    map.flyToBounds(activeRouteLine.getBounds().pad(.15), { duration: 1.2 });
+    document.getElementById('route-label').textContent = `${data.distance_label}  ·  ${data.eta_label}`;
+    document.getElementById('route-sub').textContent   = `to ${driver.name}`;
+    document.getElementById('route-bar').classList.add('visible');
+  } catch (_) {}
 }
 
-// ── Navigate button ─────────────────────────────────────────────────────
-document.getElementById('btn-navigate').addEventListener('click', async () => {
-  if (!selectedDriver) return;
-  const btn  = document.getElementById('btn-navigate');
-  const data = btn._routeData;
-  if (!data) return;
-
+function showJobRoute(job) {
   closeSheet();
-
-  // Draw route polyline from GeoJSON
   clearRoute();
-  const coords = data.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
-  routePolyline = L.polyline(coords, {
-    color: '#1A56DB', weight: 5, opacity: .85,
-    dashArray: null,
-  }).addTo(map);
-  map.flyToBounds(routePolyline.getBounds().pad(.15), { duration: 1.2 });
-
-  // Show compact route bar
-  document.getElementById('route-label').textContent = `${data.distance_label}  ·  ${data.eta_label}`;
+  const coords = [
+    [job.pickup.lat,  job.pickup.lng],
+    [job.dropoff.lat, job.dropoff.lng],
+  ];
+  activeRouteLine = L.polyline(coords, { color: '#F59E0B', weight: 4, opacity: .85, dashArray: '12 6' }).addTo(map);
+  map.flyToBounds(L.latLngBounds(coords).pad(.25), { duration: 1.2 });
+  document.getElementById('route-label').textContent = `${job.pickup.name || 'Pickup'} → ${job.dropoff.name || 'Dropoff'}`;
+  document.getElementById('route-sub').textContent   = job.description || 'Job route';
   document.getElementById('route-bar').classList.add('visible');
-});
+}
 
 document.getElementById('route-close').addEventListener('click', clearRoute);
 
 function clearRoute() {
-  if (routePolyline) { map.removeLayer(routePolyline); routePolyline = null; }
+  if (activeRouteLine) { map.removeLayer(activeRouteLine); activeRouteLine = null; }
   document.getElementById('route-bar').classList.remove('visible');
 }
 
-// ── Chat button ─────────────────────────────────────────────────────────
-document.getElementById('btn-chat').addEventListener('click', async () => {
-  if (!selectedDriver) return;
-  await ensureSession();
-  const res = await fetch(`${API}/api/conversations`, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ driverId: selectedDriver.driverId, sessionId }),
-  });
-  if (!res.ok) { alert('Could not start chat. Please try again.'); return; }
-  const { conversationId } = await res.json();
-  window.location.href = `/customer/chat.html?conv=${conversationId}&session=${sessionId}&driver=${encodeURIComponent(selectedDriver.name)}`;
-});
+// Distance/ETA from user to driver
+async function refreshDriverStats(toLat, toLng) {
+  const distEl = document.getElementById('stat-dist');
+  const etaEl  = document.getElementById('stat-eta');
+  if (!distEl || !etaEl) return;
+  if (myLat === null) { distEl.textContent = '—'; etaEl.textContent = '—'; return; }
+  try {
+    const res  = await fetch(`/api/route?from=${myLat},${myLng}&to=${toLat},${toLng}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error();
+    distEl.textContent = data.distance_label;
+    etaEl.textContent  = data.eta_label;
+  } catch {
+    distEl.textContent = 'N/A';
+    etaEl.textContent  = '—';
+  }
+}
 
-// ── My location ─────────────────────────────────────────────────────────
+// ── My location ───────────────────────────────────────────────────────────────
 function setMyLocation(lat, lng, accuracy) {
   myLat = lat; myLng = lng;
   if (!myMarker) {
@@ -416,10 +556,10 @@ function setMyLocation(lat, lng, accuracy) {
       zIndexOffset: -100,
     }).addTo(map);
     myCircle = L.circle([lat, lng], { radius: accuracy || 0, color: '#1A56DB', fillColor: '#1A56DB', fillOpacity: .07, weight: 1.5 }).addTo(map);
-    map.flyTo([lat, lng], 13, { duration: 1.5 });
+    map.flyTo([lat, lng], 12, { duration: 1.5 });
   } else {
     myMarker.setLatLng([lat, lng]);
-    if (myCircle) myCircle.setLatLng([lat, lng]).setRadius(accuracy || 0);
+    myCircle?.setLatLng([lat, lng]).setRadius(accuracy || 0);
   }
 }
 
@@ -428,33 +568,111 @@ function startWatchingLocation() {
   navigator.geolocation.watchPosition(
     ({ coords }) => setMyLocation(coords.latitude, coords.longitude, coords.accuracy),
     null,
-    { enableHighAccuracy: true, maximumAge: 5000 }
+    { enableHighAccuracy: true, maximumAge: 5000 },
   );
 }
 
 document.getElementById('locate-btn').addEventListener('click', () => {
-  if (myLat !== null) map.flyTo([myLat, myLng], 14, { duration: 1.2 });
+  if (myLat !== null) map.flyTo([myLat, myLng], 13, { duration: 1.2 });
   else startWatchingLocation();
 });
 
-// ── Helpers ─────────────────────────────────────────────────────────────
+// ── Post Job modal ────────────────────────────────────────────────────────────
+document.getElementById('post-job-btn').addEventListener('click', () => {
+  document.getElementById('post-modal').classList.add('visible');
+  document.getElementById('input-pickup').focus();
+});
+document.getElementById('modal-cancel').addEventListener('click', closeModal);
+
+function closeModal() {
+  document.getElementById('post-modal').classList.remove('visible');
+  document.getElementById('modal-error').classList.remove('visible');
+}
+
+document.getElementById('post-modal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('post-modal')) closeModal();
+});
+
+async function geocodePlace(query) {
+  try {
+    const url  = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
+    const res  = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+    const data = await res.json();
+    if (!data.length) return null;
+    return {
+      name: data[0].display_name.split(',')[0].trim(),
+      lat:  parseFloat(data[0].lat),
+      lng:  parseFloat(data[0].lon),
+    };
+  } catch (_) { return null; }
+}
+
+document.getElementById('modal-submit').addEventListener('click', async () => {
+  const pickupText = document.getElementById('input-pickup').value.trim();
+  const dropoffText= document.getElementById('input-dropoff').value.trim();
+  const phone      = document.getElementById('input-phone').value.trim();
+  const desc       = document.getElementById('input-desc').value.trim();
+  const errEl      = document.getElementById('modal-error');
+  const btn        = document.getElementById('modal-submit');
+
+  errEl.classList.remove('visible');
+
+  if (!pickupText || !dropoffText || !phone) {
+    errEl.textContent = 'Please fill in pickup, dropoff, and phone number.';
+    errEl.classList.add('visible');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Looking up locations…';
+
+  const [pickup, dropoff] = await Promise.all([geocodePlace(pickupText), geocodePlace(dropoffText)]);
+
+  if (!pickup) {
+    errEl.textContent = `Couldn't find "${pickupText}" — try a town or city name.`;
+    errEl.classList.add('visible');
+    btn.disabled = false; btn.textContent = 'Post Job'; return;
+  }
+  if (!dropoff) {
+    errEl.textContent = `Couldn't find "${dropoffText}" — try a town or city name.`;
+    errEl.classList.add('visible');
+    btn.disabled = false; btn.textContent = 'Post Job'; return;
+  }
+
+  try {
+    btn.textContent = 'Posting…';
+    const res = await fetch('/api/jobs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pickup, dropoff, phone, description: desc }),
+    });
+    if (!res.ok) throw new Error();
+    closeModal();
+    // Clear inputs for next time
+    ['input-pickup','input-dropoff','input-phone','input-desc'].forEach(id => { document.getElementById(id).value = ''; });
+    // Fly to pickup
+    map.flyTo([pickup.lat, pickup.lng], 11, { duration: 1.5 });
+  } catch (_) {
+    errEl.textContent = 'Failed to post job — please try again.';
+    errEl.classList.add('visible');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Post Job';
+  }
+});
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function setSrv(s, t) {
-  const el = document.getElementById('srv-pill');
-  el.className = `srv-pill ${s}`;
+  document.getElementById('srv-pill').className = `srv-pill ${s}`;
   document.getElementById('srv-label').textContent = t;
 }
-
 function fitUK() { map.setView([54.5, -3.2], 6); }
-
 function fitDrivers(drivers) {
-  if (!drivers.length) return;
-  const lls = drivers.filter(d => d.lat && d.lng).map(d => [d.lat, d.lng]);
+  const lls = drivers.map(d => [d.lat, d.lng]);
   if (lls.length === 1) map.flyTo(lls[0], 12, { duration: 1.2 });
-  else if (lls.length > 1) map.flyToBounds(L.latLngBounds(lls).pad(.3), { duration: 1.5 });
+  else map.flyToBounds(L.latLngBounds(lls).pad(.3), { duration: 1.5 });
 }
 
-// ── Boot ─────────────────────────────────────────────────────────────────
-ensureSession();
+// ── Boot ──────────────────────────────────────────────────────────────────────
 startWatchingLocation();
 </script>
 </body>

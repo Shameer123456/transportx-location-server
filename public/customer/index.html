@@ -135,6 +135,35 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,-apple-sy
 .modal-error{font-size:.8rem;color:var(--red);margin-top:10px;display:none}
 .modal-error.visible{display:block}
 
+/* ── auth overlay ── */
+.auth-overlay{position:fixed;inset:0;z-index:900;background:#111827;display:flex;align-items:center;justify-content:center;padding:20px}
+.auth-card{background:#1F2937;border-radius:24px;padding:32px 28px;width:100%;max-width:420px;box-shadow:0 24px 80px rgba(0,0,0,.5)}
+.auth-logo{text-align:center;margin-bottom:24px}
+.auth-logo-emoji{font-size:44px;display:block;margin-bottom:8px}
+.auth-logo-title{font-size:26px;font-weight:900;color:#F59E0B;letter-spacing:.5px}
+.auth-logo-sub{font-size:12px;color:#6B7280;margin-top:4px}
+.auth-toggle{display:flex;background:#111827;border-radius:12px;padding:4px;margin-bottom:20px}
+.auth-toggle-btn{flex:1;padding:9px;border:none;background:transparent;border-radius:9px;font-size:.85rem;font-weight:700;color:#6B7280;cursor:pointer;font-family:'Segoe UI',sans-serif;transition:all .15s}
+.auth-toggle-btn.active{background:#F59E0B;color:#111827}
+.auth-role-row{display:flex;gap:10px;margin-bottom:18px}
+.auth-role-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border:2px solid transparent;border-radius:12px;background:#111827;font-size:.85rem;font-weight:700;color:#6B7280;cursor:pointer;font-family:'Segoe UI',sans-serif;transition:all .15s}
+.auth-role-btn.active{border-color:#F59E0B;color:#F59E0B}
+.auth-label{font-size:.7rem;font-weight:700;color:#6B7280;letter-spacing:.5px;margin-bottom:6px;margin-top:14px;text-transform:uppercase}
+.auth-input{width:100%;background:#111827;border:1.5px solid #374151;border-radius:12px;padding:13px 16px;font-size:.9rem;color:#F9FAFB;font-family:'Segoe UI',sans-serif;outline:none;transition:border-color .15s;box-sizing:border-box}
+.auth-input:focus{border-color:#F59E0B}
+.auth-input::placeholder{color:#6B7280}
+.auth-submit-btn{width:100%;margin-top:18px;padding:15px;background:#F59E0B;border:none;border-radius:14px;font-size:.95rem;font-weight:900;color:#111827;cursor:pointer;font-family:'Segoe UI',sans-serif;transition:all .15s}
+.auth-submit-btn:hover{background:#d97706}
+.auth-submit-btn:disabled{opacity:.55;cursor:not-allowed}
+.auth-err{font-size:.78rem;color:#EF4444;margin-top:10px;display:none}
+.auth-err.visible{display:block}
+.auth-switch{text-align:center;margin-top:14px;font-size:.8rem;color:#6B7280}
+.auth-switch a{color:#F59E0B;font-weight:700;cursor:pointer;text-decoration:none}
+/* user pill in topbar */
+.user-pill{background:var(--card);border-radius:50px;padding:7px 12px;box-shadow:var(--shadow);font-size:.78rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;cursor:pointer}
+.user-pill:hover .signout-label{text-decoration:underline}
+.signout-label{color:var(--muted);font-weight:400}
+
 /* ── leaflet overrides ── */
 .leaflet-control-zoom{border:none!important;box-shadow:var(--shadow)!important}
 .leaflet-control-zoom a{background:var(--card)!important;color:var(--text)!important;border:none!important;border-bottom:1px solid var(--border)!important;width:36px!important;height:36px!important;line-height:36px!important}
@@ -161,6 +190,10 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,-apple-sy
   </div>
   <div class="srv-pill err" id="srv-pill">
     <span class="dot"></span><span id="srv-label">Connecting</span>
+  </div>
+  <div class="user-pill" id="user-pill" style="display:none" onclick="signOut()">
+    <span id="user-pill-name"></span>
+    <span class="signout-label">Sign out</span>
   </div>
 </div>
 
@@ -203,14 +236,53 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,-apple-sy
     <input class="modal-input" id="input-pickup" placeholder="e.g. Manchester" autocomplete="off"/>
     <div class="modal-label">DROPOFF LOCATION</div>
     <input class="modal-input" id="input-dropoff" placeholder="e.g. London" autocomplete="off"/>
-    <div class="modal-label">YOUR PHONE NUMBER</div>
-    <input class="modal-input" id="input-phone" placeholder="e.g. 07911 123456" type="tel" autocomplete="tel"/>
     <div class="modal-label">DESCRIPTION <span style="font-weight:400;text-transform:none">(optional)</span></div>
     <input class="modal-input" id="input-desc" placeholder="e.g. 2 pallets, available from 9am" autocomplete="off"/>
     <div class="modal-error" id="modal-error"></div>
     <div class="modal-actions">
       <button class="modal-btn secondary" id="modal-cancel">Cancel</button>
       <button class="modal-btn primary" id="modal-submit">Post Job</button>
+    </div>
+  </div>
+</div>
+
+<!-- Auth overlay -->
+<div class="auth-overlay" id="auth-overlay" style="display:none">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <span class="auth-logo-emoji">🚛</span>
+      <div class="auth-logo-title">TransportX</div>
+      <div class="auth-logo-sub">Sign in to post and track jobs</div>
+    </div>
+    <div class="auth-toggle">
+      <button class="auth-toggle-btn active" id="auth-tab-login" onclick="setAuthMode('login')">Sign In</button>
+      <button class="auth-toggle-btn" id="auth-tab-register" onclick="setAuthMode('register')">Register</button>
+    </div>
+    <!-- Register: role -->
+    <div id="auth-role-section" style="display:none">
+      <div class="auth-role-row">
+        <button class="auth-role-btn active" id="role-btn-customer" onclick="setAuthRole('customer')">📦 Customer</button>
+        <button class="auth-role-btn" id="role-btn-driver" onclick="setAuthRole('driver')">🚛 Driver</button>
+      </div>
+    </div>
+    <!-- Register: name -->
+    <div id="auth-name-section" style="display:none">
+      <div class="auth-label">Full Name</div>
+      <input class="auth-input" id="auth-name" placeholder="John Smith" autocomplete="name"/>
+    </div>
+    <!-- Register: phone -->
+    <div id="auth-phone-section" style="display:none">
+      <div class="auth-label">Phone Number</div>
+      <input class="auth-input" id="auth-phone" placeholder="+44 7911 123456" type="tel"/>
+    </div>
+    <div class="auth-label">Email</div>
+    <input class="auth-input" id="auth-email" placeholder="you@example.com" type="email" autocomplete="email"/>
+    <div class="auth-label">Password</div>
+    <input class="auth-input" id="auth-password" placeholder="••••••••" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doAuth()"/>
+    <div class="auth-err" id="auth-err"></div>
+    <button class="auth-submit-btn" id="auth-submit-btn" onclick="doAuth()">Sign In</button>
+    <div class="auth-switch">
+      Don't have an account? <a onclick="setAuthMode('register')">Register</a>
     </div>
   </div>
 </div>
@@ -610,16 +682,23 @@ async function geocodePlace(query) {
 document.getElementById('modal-submit').addEventListener('click', async () => {
   const pickupText = document.getElementById('input-pickup').value.trim();
   const dropoffText= document.getElementById('input-dropoff').value.trim();
-  const phone      = document.getElementById('input-phone').value.trim();
   const desc       = document.getElementById('input-desc').value.trim();
   const errEl      = document.getElementById('modal-error');
   const btn        = document.getElementById('modal-submit');
+  const token      = localStorage.getItem('tx_token');
 
   errEl.classList.remove('visible');
 
-  if (!pickupText || !dropoffText || !phone) {
-    errEl.textContent = 'Please fill in pickup, dropoff, and phone number.';
+  if (!pickupText || !dropoffText) {
+    errEl.textContent = 'Please fill in pickup and dropoff locations.';
     errEl.classList.add('visible');
+    return;
+  }
+  if (!token) {
+    errEl.textContent = 'Please sign in first.';
+    errEl.classList.add('visible');
+    closeModal();
+    showAuthOverlay();
     return;
   }
 
@@ -643,17 +722,19 @@ document.getElementById('modal-submit').addEventListener('click', async () => {
     btn.textContent = 'Posting…';
     const res = await fetch('/api/jobs', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pickup, dropoff, phone, description: desc }),
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ pickup, dropoff, description: desc }),
     });
-    if (!res.ok) throw new Error();
+    const data = await res.json();
+    if (!res.ok) {
+      if (res.status === 401) { signOut(); return; }
+      throw new Error(data.error || 'Post failed');
+    }
     closeModal();
-    // Clear inputs for next time
-    ['input-pickup','input-dropoff','input-phone','input-desc'].forEach(id => { document.getElementById(id).value = ''; });
-    // Fly to pickup
+    ['input-pickup','input-dropoff','input-desc'].forEach(id => { document.getElementById(id).value = ''; });
     map.flyTo([pickup.lat, pickup.lng], 11, { duration: 1.5 });
-  } catch (_) {
-    errEl.textContent = 'Failed to post job — please try again.';
+  } catch (err) {
+    errEl.textContent = err.message || 'Failed to post job — please try again.';
     errEl.classList.add('visible');
   } finally {
     btn.disabled = false; btn.textContent = 'Post Job';
@@ -672,8 +753,94 @@ function fitDrivers(drivers) {
   else map.flyToBounds(L.latLngBounds(lls).pad(.3), { duration: 1.5 });
 }
 
+// ── Auth ──────────────────────────────────────────────────────────────────────
+let authMode = 'login';
+let authRole = 'customer';
+
+function showAuthOverlay() {
+  document.getElementById('auth-overlay').style.display = 'flex';
+  setAuthMode('login');
+  setTimeout(() => document.getElementById('auth-email').focus(), 100);
+}
+function hideAuthOverlay() {
+  document.getElementById('auth-overlay').style.display = 'none';
+}
+function setAuthMode(mode) {
+  authMode = mode;
+  document.getElementById('auth-tab-login').classList.toggle('active', mode === 'login');
+  document.getElementById('auth-tab-register').classList.toggle('active', mode === 'register');
+  document.getElementById('auth-role-section').style.display  = mode === 'register' ? '' : 'none';
+  document.getElementById('auth-name-section').style.display  = mode === 'register' ? '' : 'none';
+  document.getElementById('auth-phone-section').style.display = mode === 'register' ? '' : 'none';
+  document.getElementById('auth-submit-btn').textContent = mode === 'login' ? 'Sign In' : 'Create Account';
+  document.querySelector('.auth-switch').innerHTML = mode === 'login'
+    ? 'Don\'t have an account? <a onclick="setAuthMode(\'register\')">Register</a>'
+    : 'Already have an account? <a onclick="setAuthMode(\'login\')">Sign In</a>';
+  document.getElementById('auth-err').classList.remove('visible');
+}
+function setAuthRole(role) {
+  authRole = role;
+  document.getElementById('role-btn-customer').classList.toggle('active', role === 'customer');
+  document.getElementById('role-btn-driver').classList.toggle('active', role === 'driver');
+}
+async function doAuth() {
+  const email    = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const errEl    = document.getElementById('auth-err');
+  const btn      = document.getElementById('auth-submit-btn');
+  errEl.classList.remove('visible');
+  if (!email || !password) { errEl.textContent = 'Email and password are required.'; errEl.classList.add('visible'); return; }
+
+  let body;
+  if (authMode === 'register') {
+    const name  = document.getElementById('auth-name').value.trim();
+    const phone = document.getElementById('auth-phone').value.trim();
+    if (!name || !phone) { errEl.textContent = 'Name and phone are required.'; errEl.classList.add('visible'); return; }
+    body = { email, password, name, phone, role: authRole };
+  } else {
+    body = { email, password };
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Please wait…';
+  try {
+    const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
+    const res  = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Authentication failed.'; errEl.classList.add('visible'); return; }
+    localStorage.setItem('tx_token', data.token);
+    localStorage.setItem('tx_user',  JSON.stringify(data.user));
+    showUserPill(data.user);
+    hideAuthOverlay();
+  } catch {
+    errEl.textContent = 'Could not reach server — try again.';
+    errEl.classList.add('visible');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = authMode === 'login' ? 'Sign In' : 'Create Account';
+  }
+}
+function showUserPill(user) {
+  const pill = document.getElementById('user-pill');
+  document.getElementById('user-pill-name').textContent = user.name;
+  pill.style.display = '';
+}
+function signOut() {
+  localStorage.removeItem('tx_token');
+  localStorage.removeItem('tx_user');
+  document.getElementById('user-pill').style.display = 'none';
+  showAuthOverlay();
+}
+function checkAuth() {
+  const token = localStorage.getItem('tx_token');
+  const user  = JSON.parse(localStorage.getItem('tx_user') || 'null');
+  if (token && user) { showUserPill(user); }
+  else { showAuthOverlay(); }
+}
+
 // ── Boot ──────────────────────────────────────────────────────────────────────
 startWatchingLocation();
+checkAuth();
 </script>
 </body>
 </html>

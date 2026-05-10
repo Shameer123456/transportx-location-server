@@ -17,20 +17,32 @@
 }
 html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg)}
 
-/* ── Name prompt overlay ── */
-#name-overlay{position:fixed;inset:0;z-index:2000;background:rgba(17,24,39,.6);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:24px}
-#name-overlay.hidden{display:none}
-.name-card{background:var(--card);border-radius:24px;padding:36px 32px;width:100%;max-width:360px;box-shadow:var(--shadow-lg);text-align:center}
-.name-card .logo{width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;margin:0 auto 20px}
-.name-card .logo svg{width:26px;height:26px;fill:none;stroke:#fff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
-.name-card h2{font-size:1.3rem;font-weight:800;color:var(--text);margin-bottom:6px}
-.name-card p{font-size:.85rem;color:var(--muted);margin-bottom:24px}
-.name-card input{width:100%;padding:13px 16px;border-radius:14px;border:1.5px solid var(--border);font-size:1rem;color:var(--text);font-family:inherit;outline:none;text-align:center;transition:border-color .15s}
-.name-card input:focus{border-color:var(--primary)}
-.name-card input::placeholder{color:#9CA3AF}
-.name-card button{width:100%;margin-top:14px;padding:14px;border-radius:14px;border:none;background:var(--primary);color:#fff;font-size:.95rem;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;box-shadow:0 4px 16px rgba(26,86,219,.3)}
-.name-card button:hover{background:#1347c8}
-.name-card button:active{transform:scale(.98)}
+/* ── Auth overlay ── */
+.auth-overlay{position:fixed;inset:0;z-index:2000;background:#111827;display:flex;align-items:center;justify-content:center;padding:20px}
+.auth-card{background:#1F2937;border-radius:24px;padding:32px 28px;width:100%;max-width:400px;box-shadow:0 24px 80px rgba(0,0,0,.5)}
+.auth-logo{text-align:center;margin-bottom:24px}
+.auth-logo-emoji{font-size:44px;display:block;margin-bottom:8px}
+.auth-logo-title{font-size:26px;font-weight:900;color:#F59E0B;letter-spacing:.5px}
+.auth-logo-sub{font-size:12px;color:#6B7280;margin-top:4px}
+.auth-toggle{display:flex;background:#111827;border-radius:12px;padding:4px;margin-bottom:20px}
+.auth-toggle-btn{flex:1;padding:9px;border:none;background:transparent;border-radius:9px;font-size:.85rem;font-weight:700;color:#6B7280;cursor:pointer;font-family:'Segoe UI',sans-serif;transition:all .15s}
+.auth-toggle-btn.active{background:#F59E0B;color:#111827}
+.auth-role-row{display:flex;gap:10px;margin-bottom:18px}
+.auth-role-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border:2px solid transparent;border-radius:12px;background:#111827;font-size:.85rem;font-weight:700;color:#6B7280;cursor:pointer;font-family:'Segoe UI',sans-serif;transition:all .15s}
+.auth-role-btn.active{border-color:#F59E0B;color:#F59E0B}
+.auth-label{font-size:.7rem;font-weight:700;color:#6B7280;letter-spacing:.5px;margin-bottom:6px;margin-top:14px;text-transform:uppercase}
+.auth-input{width:100%;background:#111827;border:1.5px solid #374151;border-radius:12px;padding:13px 16px;font-size:.9rem;color:#F9FAFB;font-family:'Segoe UI',sans-serif;outline:none;transition:border-color .15s;box-sizing:border-box}
+.auth-input:focus{border-color:#F59E0B}
+.auth-input::placeholder{color:#6B7280}
+.auth-submit-btn{width:100%;margin-top:18px;padding:15px;background:#F59E0B;border:none;border-radius:14px;font-size:.95rem;font-weight:900;color:#111827;cursor:pointer;font-family:'Segoe UI',sans-serif;transition:all .15s}
+.auth-submit-btn:hover{background:#d97706}
+.auth-submit-btn:disabled{opacity:.55;cursor:not-allowed}
+.auth-err{font-size:.78rem;color:#EF4444;margin-top:10px;display:none}
+.auth-err.visible{display:block}
+.auth-switch{text-align:center;margin-top:14px;font-size:.8rem;color:#6B7280}
+.auth-switch a{color:#F59E0B;font-weight:700;cursor:pointer;text-decoration:none}
+/* sign-out in header */
+.signout-btn{padding:5px 10px;border-radius:8px;border:none;background:rgba(239,68,68,.1);color:var(--red);font-size:.7rem;font-weight:700;cursor:pointer;font-family:inherit}
 
 /* ── Dashboard ── */
 #dashboard{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg)}
@@ -101,20 +113,65 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,-apple-sy
 /* change name link */
 .change-name{text-align:center;font-size:.75rem;color:var(--muted);cursor:pointer;padding:4px}
 .change-name:hover{color:var(--primary)}
+
+/* ── Job Board panel ── */
+#job-board{flex:1;display:none;flex-direction:column;overflow:hidden}
+#job-board.active{display:flex}
+#job-map{flex:1}
+.job-sheet-backdrop{position:absolute;inset:0;z-index:600;background:rgba(0,0,0,.2);opacity:0;pointer-events:none;transition:opacity .2s}
+.job-sheet-backdrop.visible{opacity:1;pointer-events:all}
+.job-sheet{position:absolute;bottom:0;left:0;right:0;z-index:601;background:var(--card);border-radius:24px 24px 0 0;padding:20px 22px 28px;box-shadow:0 -8px 40px rgba(0,0,0,.14);transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
+.job-sheet.open{transform:translateY(0)}
+.job-sheet-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px}
+.job-sheet-header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.job-sheet-icon{width:48px;height:48px;border-radius:14px;background:#FEF3C7;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0}
+.job-sheet-meta{flex:1}
+.job-sheet-title{font-size:1rem;font-weight:800;color:var(--text);line-height:1.3}
+.job-sheet-sub{font-size:.75rem;color:var(--amber,#F59E0B);font-weight:600;margin-top:3px}
+.job-sheet-desc{font-size:.82rem;color:var(--muted);margin-bottom:14px;line-height:1.5}
+.job-call-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:15px;border-radius:14px;background:#dcfce7;color:#16a34a;font-size:.92rem;font-weight:800;text-decoration:none;font-family:inherit;border:none;cursor:pointer;transition:background .15s}
+.job-call-btn:hover{background:#bbf7d0}
+.job-no-jobs{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);font-size:.9rem;gap:10px;padding:40px}
+.job-no-jobs span{font-size:2.5rem}
 </style>
 </head>
 <body>
 
-<!-- Name prompt -->
-<div id="name-overlay">
-  <div class="name-card">
-    <div class="logo">
-      <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+<!-- Auth overlay -->
+<div class="auth-overlay" id="auth-overlay" style="display:none">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <span class="auth-logo-emoji">🚛</span>
+      <div class="auth-logo-title">TransportX</div>
+      <div class="auth-logo-sub">Driver dashboard — sign in to continue</div>
     </div>
-    <h2>Driver Setup</h2>
-    <p>Enter your name to get started. This is shown to customers.</p>
-    <input type="text" id="name-input" placeholder="Your name" autocomplete="name" maxlength="40"/>
-    <button id="name-btn">Get Started →</button>
+    <div class="auth-toggle">
+      <button class="auth-toggle-btn active" id="auth-tab-login" onclick="setAuthMode('login')">Sign In</button>
+      <button class="auth-toggle-btn" id="auth-tab-register" onclick="setAuthMode('register')">Register</button>
+    </div>
+    <div id="auth-role-section" style="display:none">
+      <div class="auth-role-row">
+        <button class="auth-role-btn" id="role-btn-customer" onclick="setAuthRole('customer')">📦 Customer</button>
+        <button class="auth-role-btn active" id="role-btn-driver" onclick="setAuthRole('driver')">🚛 Driver</button>
+      </div>
+    </div>
+    <div id="auth-name-section" style="display:none">
+      <div class="auth-label">Full Name</div>
+      <input class="auth-input" id="auth-name" placeholder="John Smith" autocomplete="name"/>
+    </div>
+    <div id="auth-phone-section" style="display:none">
+      <div class="auth-label">Phone Number</div>
+      <input class="auth-input" id="auth-phone" placeholder="+44 7911 123456" type="tel"/>
+    </div>
+    <div class="auth-label">Email</div>
+    <input class="auth-input" id="auth-email" placeholder="you@example.com" type="email" autocomplete="email"/>
+    <div class="auth-label">Password</div>
+    <input class="auth-input" id="auth-password" placeholder="••••••••" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doAuth()"/>
+    <div class="auth-err" id="auth-err"></div>
+    <button class="auth-submit-btn" id="auth-submit-btn" onclick="doAuth()">Sign In</button>
+    <div class="auth-switch">
+      Don't have an account? <a onclick="setAuthMode('register')">Register</a>
+    </div>
   </div>
 </div>
 
@@ -129,11 +186,12 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,-apple-sy
     <div class="conn-badge err" id="conn-badge">
       <span class="dot"></span><span id="conn-label">Connecting</span>
     </div>
+    <button class="signout-btn" onclick="signOut()">Sign out</button>
   </div>
 
   <div class="dash-nav">
-    <a class="nav-link active" href="/driver/">Dashboard</a>
-    <a class="nav-link" href="/customer/">Customer View</a>
+    <a class="nav-link active" id="tab-dashboard" href="#">Dashboard</a>
+    <a class="nav-link" id="tab-jobs" href="#">📦 Job Board</a>
     <a class="nav-link" href="/downloads/">Get App</a>
     <a class="nav-link" href="/">Home</a>
   </div>
@@ -192,16 +250,98 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,-apple-sy
     <div class="change-name" id="change-name-btn">Change name</div>
 
   </div>
+
+  <!-- Job Board tab -->
+  <div id="job-board">
+    <div id="job-map"></div>
+    <div class="job-sheet-backdrop" id="job-backdrop"></div>
+    <div class="job-sheet" id="job-sheet">
+      <div class="job-sheet-handle"></div>
+      <div class="job-sheet-header">
+        <div class="job-sheet-icon">📦</div>
+        <div class="job-sheet-meta">
+          <div class="job-sheet-title" id="js-title">—</div>
+          <div class="job-sheet-sub">Job Available</div>
+        </div>
+      </div>
+      <div class="job-sheet-desc" id="js-desc"></div>
+      <a class="job-call-btn" id="js-call" href="#">📞 Call Customer</a>
+    </div>
+  </div>
 </div>
 
 <script>
-// ── Persistent identity ──────────────────────────────────────────────
-let driverName = localStorage.getItem('tx_driver_name');
-let driverId   = localStorage.getItem('tx_driver_id');
-if (!driverId) {
-  driverId = 'drv-' + Math.random().toString(36).slice(2, 9);
-  localStorage.setItem('tx_driver_id', driverId);
+// ── Auth state ───────────────────────────────────────────────────────
+let authMode = 'login';
+let authRole = 'driver';
+
+function setAuthMode(mode) {
+  authMode = mode;
+  document.getElementById('auth-tab-login').classList.toggle('active', mode === 'login');
+  document.getElementById('auth-tab-register').classList.toggle('active', mode === 'register');
+  document.getElementById('auth-role-section').style.display  = mode === 'register' ? '' : 'none';
+  document.getElementById('auth-name-section').style.display  = mode === 'register' ? '' : 'none';
+  document.getElementById('auth-phone-section').style.display = mode === 'register' ? '' : 'none';
+  document.getElementById('auth-submit-btn').textContent = mode === 'login' ? 'Sign In' : 'Create Account';
+  document.querySelector('.auth-switch').innerHTML = mode === 'login'
+    ? 'Don\'t have an account? <a onclick="setAuthMode(\'register\')">Register</a>'
+    : 'Already have an account? <a onclick="setAuthMode(\'login\')">Sign In</a>';
+  document.getElementById('auth-err').classList.remove('visible');
 }
+function setAuthRole(role) {
+  authRole = role;
+  document.getElementById('role-btn-customer').classList.toggle('active', role === 'customer');
+  document.getElementById('role-btn-driver').classList.toggle('active', role === 'driver');
+}
+async function doAuth() {
+  const email    = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const errEl    = document.getElementById('auth-err');
+  const btn      = document.getElementById('auth-submit-btn');
+  errEl.classList.remove('visible');
+  if (!email || !password) { errEl.textContent = 'Email and password are required.'; errEl.classList.add('visible'); return; }
+
+  let body;
+  if (authMode === 'register') {
+    const name  = document.getElementById('auth-name').value.trim();
+    const phone = document.getElementById('auth-phone').value.trim();
+    if (!name || !phone) { errEl.textContent = 'Name and phone are required.'; errEl.classList.add('visible'); return; }
+    body = { email, password, name, phone, role: authRole };
+  } else {
+    body = { email, password };
+  }
+  btn.disabled = true; btn.textContent = 'Please wait…';
+  try {
+    const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
+    const res  = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Authentication failed.'; errEl.classList.add('visible'); return; }
+    localStorage.setItem('tx_token', data.token);
+    localStorage.setItem('tx_user',  JSON.stringify(data.user));
+    document.getElementById('auth-overlay').style.display = 'none';
+    bootFromUser(data.user);
+  } catch {
+    errEl.textContent = 'Could not reach server — try again.';
+    errEl.classList.add('visible');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = authMode === 'login' ? 'Sign In' : 'Create Account';
+  }
+}
+function signOut() {
+  if (isOnline) goOffline();
+  localStorage.removeItem('tx_token');
+  localStorage.removeItem('tx_user');
+  localStorage.removeItem('tx_driver_online');
+  document.getElementById('auth-overlay').style.display = 'flex';
+  setAuthMode('login');
+  setTimeout(() => document.getElementById('auth-email').focus(), 100);
+}
+
+// ── Identity from auth ───────────────────────────────────────────────
+let driverName = null;
+let driverId   = null;
+let driverPhone = null;
 
 let isOnline     = false;
 let sessionStart = null;
@@ -211,51 +351,39 @@ let miniMap      = null;
 let miniMarker   = null;
 let myLat = null, myLng = null;
 
-// ── Name prompt ──────────────────────────────────────────────────────
-function showNamePrompt() {
-  document.getElementById('name-overlay').classList.remove('hidden');
-  setTimeout(() => document.getElementById('name-input').focus(), 100);
-}
-function hideNamePrompt() {
-  document.getElementById('name-overlay').classList.add('hidden');
-}
-
-document.getElementById('name-btn').addEventListener('click', saveName);
-document.getElementById('name-input').addEventListener('keydown', e => { if (e.key === 'Enter') saveName(); });
-
-function saveName() {
-  const val = document.getElementById('name-input').value.trim();
-  if (!val) { document.getElementById('name-input').style.borderColor = '#EF4444'; return; }
-  driverName = val;
-  localStorage.setItem('tx_driver_name', driverName);
-  hideNamePrompt();
+// ── Boot ─────────────────────────────────────────────────────────────
+function bootFromUser(user) {
+  driverName  = user.name;
+  driverId    = user.driverId || user.id;
+  driverPhone = user.phone;
   boot();
 }
 
-document.getElementById('change-name-btn').addEventListener('click', () => {
-  if (isOnline) goOffline();
-  document.getElementById('name-input').value = driverName || '';
-  showNamePrompt();
-});
-
-// ── Boot ─────────────────────────────────────────────────────────────
 function boot() {
   const ini = driverName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
   document.getElementById('dash-avatar').textContent = ini;
   document.getElementById('dash-name').textContent   = driverName;
-  document.getElementById('dash-id').textContent     = 'ID: ' + driverId;
+  document.getElementById('dash-id').textContent     = driverPhone || ('ID: ' + driverId.slice(-8));
   initMiniMap();
   startGPS();
   connectSocket();
   setInterval(tickSession, 15000);
 }
 
-if (driverName) {
-  hideNamePrompt();
-  boot();
+// ── Startup check ─────────────────────────────────────────────────────
+const savedToken = localStorage.getItem('tx_token');
+const savedUser  = JSON.parse(localStorage.getItem('tx_user') || 'null');
+if (savedToken && savedUser) {
+  bootFromUser(savedUser);
 } else {
-  showNamePrompt();
+  document.getElementById('auth-overlay').style.display = 'flex';
+  setTimeout(() => document.getElementById('auth-email').focus(), 100);
 }
+
+document.getElementById('change-name-btn').addEventListener('click', () => {
+  // With auth, we don't support name change inline — show sign-out instead
+  if (confirm('To update your name, please sign out and register a new account, or contact support.')) {}
+});
 
 // ── Socket.IO ────────────────────────────────────────────────────────
 function connectSocket() {
@@ -376,15 +504,93 @@ function setConn(s, t) {
 // Don't go offline on page navigation — server uses TTL expiry (3 min no ping = offline).
 // Only explicit "Go Offline" button clears the online state.
 
-// ── Heartbeat ─────────────────────────────────────────────────────────
-// Re-registers with the server every 45s. Fixes the Render cold-start race:
-// if the server restarted, onlineDrivers is wiped; this brings the driver back
-// without needing the user to manually go offline → online.
+// ── Heartbeat ────────────────────────────────────────────────────────
 setInterval(() => {
   if (isOnline && socket?.connected) {
     socket.emit('driver:online', { driverId, name: driverName, lat: myLat || 0, lng: myLng || 0 });
   }
 }, 45000);
+
+// ── Tab switching ─────────────────────────────────────────────────────
+let jobMap = null, jobMarkers = {}, jobRouteLines = {}, selectedJobData = null;
+
+document.getElementById('tab-dashboard').addEventListener('click', (e) => {
+  e.preventDefault();
+  document.getElementById('tab-dashboard').classList.add('active');
+  document.getElementById('tab-jobs').classList.remove('active');
+  document.getElementById('dash-body').style.display = 'flex';
+  document.getElementById('job-board').classList.remove('active');
+});
+
+document.getElementById('tab-jobs').addEventListener('click', (e) => {
+  e.preventDefault();
+  document.getElementById('tab-jobs').classList.add('active');
+  document.getElementById('tab-dashboard').classList.remove('active');
+  document.getElementById('dash-body').style.display = 'none';
+  document.getElementById('job-board').classList.add('active');
+  initJobMap();
+});
+
+function initJobMap() {
+  if (jobMap) { setTimeout(() => jobMap.invalidateSize(), 50); return; }
+  jobMap = L.map('job-map', { zoomControl: false }).setView([54.5, -3.2], 6);
+  L.control.zoom({ position: 'bottomright' }).addTo(jobMap);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap © CARTO', maxZoom: 19, subdomains: 'abcd',
+  }).addTo(jobMap);
+
+  // Centre on driver location if available
+  if (myLat) jobMap.setView([myLat, myLng], 10);
+
+  // Load existing jobs
+  fetch('/api/jobs').then(r => r.json()).then(list => list.forEach(addJobPin)).catch(() => {});
+
+  // Live updates
+  socket.on('job:new', addJobPin);
+}
+
+function makeJobIcon(name) {
+  return L.divIcon({
+    className: '',
+    html: `<div style="display:flex;flex-direction:column;align-items:center">
+      <div style="width:40px;height:40px;border-radius:12px;background:#F59E0B;border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-size:1.1rem;box-shadow:0 4px 12px rgba(0,0,0,.25)">📦</div>
+      <div style="background:#F59E0B;color:#fff;font-size:.58rem;font-weight:700;padding:2px 7px;border-radius:4px;margin-top:3px;white-space:nowrap;max-width:80px;overflow:hidden;text-overflow:ellipsis">${(name||'Job').slice(0,12)}</div>
+    </div>`,
+    iconSize: [40, 60], iconAnchor: [20, 56],
+  });
+}
+
+function addJobPin(job) {
+  if (!job.pickup?.lat || jobMarkers[job.jobId]) return;
+  const mkr = L.marker([job.pickup.lat, job.pickup.lng], { icon: makeJobIcon(job.pickup.name) }).addTo(jobMap);
+  mkr.on('click', () => openJobSheet(job));
+  jobMarkers[job.jobId] = mkr;
+}
+
+function openJobSheet(job) {
+  selectedJobData = job;
+  // Draw route line
+  if (jobRouteLines._active) { jobMap.removeLayer(jobRouteLines._active); }
+  if (job.pickup?.lat && job.dropoff?.lat) {
+    jobRouteLines._active = L.polyline(
+      [[job.pickup.lat, job.pickup.lng], [job.dropoff.lat, job.dropoff.lng]],
+      { color: '#F59E0B', weight: 3.5, opacity: .85, dashArray: '12 6' }
+    ).addTo(jobMap);
+    jobMap.flyToBounds(L.latLngBounds([[job.pickup.lat, job.pickup.lng],[job.dropoff.lat, job.dropoff.lng]]).pad(.25), { duration: 1 });
+  }
+  document.getElementById('js-title').textContent = `${job.pickup.name || 'Pickup'} → ${job.dropoff.name || 'Dropoff'}`;
+  document.getElementById('js-desc').textContent  = job.description || '';
+  document.getElementById('js-desc').style.display = job.description ? 'block' : 'none';
+  document.getElementById('js-call').href          = `tel:${job.phone}`;
+  document.getElementById('js-call').textContent   = `📞 Call Customer — ${job.phone}`;
+  document.getElementById('job-sheet').classList.add('open');
+  document.getElementById('job-backdrop').classList.add('visible');
+}
+
+document.getElementById('job-backdrop').addEventListener('click', () => {
+  document.getElementById('job-sheet').classList.remove('open');
+  document.getElementById('job-backdrop').classList.remove('visible');
+});
 </script>
 </body>
 </html>

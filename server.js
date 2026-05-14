@@ -22,8 +22,9 @@ const mongoose   = require('mongoose');
 const bcrypt     = require('bcryptjs');
 const jwt        = require('jsonwebtoken');
 
-const User = require('./models/User');
-const Job  = require('./models/Job');
+const User            = require('./models/User');
+const Job             = require('./models/Job');
+const LocationHistory = require('./models/LocationHistory');
 
 // ── Config ───────────────────────────────────────────────────────────────────
 const MONGO_URI  = process.env.MONGO_URI  || 'YOUR_MONGODB_ATLAS_URI_HERE';
@@ -186,6 +187,18 @@ io.on('connection', (socket) => {
     if (!d) return;
     Object.assign(d, { lat, lng, heading: heading ?? null, speed: speed ?? null, lastSeen: Date.now() });
     io.emit('driver:location', { driverId, lat, lng, heading, speed });
+
+    // ── Persist to history (fire-and-forget — never blocks the broadcast) ──
+    const now = new Date();
+    LocationHistory.create({
+      driverId,
+      driverName: d.name || '',
+      lat, lng,
+      heading: heading ?? null,
+      speed:   speed   ?? null,
+      timestamp: now,
+      date: now.toISOString().slice(0, 10),   // "2026-05-14"
+    }).catch(err => console.error('[history write]', err.message));
   });
 
   socket.on('driver:offline', ({ driverId }) => {
@@ -442,6 +455,55 @@ app.get('/api/route', async (req, res) => {
   }
 });
 
+// ── REST — driver trail (day tracking) ──────────────────────────────────────
+
+// GET /api/drivers/:driverId/trail?date=YYYY-MM-DD
+// Returns every GPS point recorded for a driver on the given date (UTC).
+// If no date is supplied, defaults to today.
+app.get('/api/drivers/:driverId/trail', async (req, res) => {
+  try {
+    const { driverId } = req.params;
+    const date = (req.query.date || new Date().toISOString().slice(0, 10)).slice(0, 10);
+    const points = await LocationHistory.find({ driverId, date })
+      .sort({ timestamp: 1 })
+      .select('lat lng heading speed timestamp -_id')
+      .lean();
+    res.json({ driverId, date, count: points.length, points });
+  } catch (err) {
+    console.error('[GET /trail]', err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET /api/trail/drivers?days=7
+// Returns all driver IDs + names that have history in the last N days.
+app.get('/api/trail/drivers', async (req, res) => {
+  try {
+    const days  = Math.min(parseInt(req.query.days || '30', 10), 90);
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const docs  = await LocationHistory.aggregate([
+      { $match: { timestamp: { $gte: since } } },
+      { $sort:  { timestamp: -1 } },
+      { $group: { _id: '$driverId', name: { $first: '$driverName' }, lastSeen: { $first: '$timestamp' }, totalPings: { $sum: 1 } } },
+      { $sort:  { lastSeen: -1 } },
+    ]);
+    res.json(docs.map(d => ({ driverId: d._id, name: d.name, lastSeen: d.lastSeen, totalPings: d.totalPings })));
+  } catch (err) {
+    console.error('[GET /trail/drivers]', err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET /api/drivers/:driverId/days  — which dates have any recorded data
+app.get('/api/drivers/:driverId/days', async (req, res) => {
+  try {
+    const dates = await LocationHistory.distinct('date', { driverId: req.params.driverId });
+    res.json(dates.sort().reverse());
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // ── REST — legacy tracker ────────────────────────────────────────────────────
 app.get('/api/devices', (_req, res) => {
   res.json(Object.entries(devices).map(([id, d]) => ({
@@ -531,7 +593,8 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`  Driver   → http://localhost:${PORT}/driver/`);
   console.log(`  Customer → http://localhost:${PORT}/customer/`);
   console.log(`  Tracker  → http://${ip}:${PORT}/tracker/`);
-  console.log(`  Viewer   → http://localhost:${PORT}/viewer/\n`);
+  console.log(`  Viewer   → http://localhost:${PORT}/viewer/`);
+  console.log(`  Tracking → http://localhost:${PORT}/tracking/\n`);
 });
 
 function getLocalIP() {

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
@@ -9,67 +9,169 @@
 <script src="/socket.io/socket.io.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --primary:#1A56DB;--accent:#0EA5E9;--green:#10B981;--red:#EF4444;--amber:#F59E0B;
-  --bg:#F9FAFB;--card:#FFFFFF;--border:#E5E7EB;--text:#111827;--muted:#6B7280;--light:#F3F4F6;
+
+/* ── Theme tokens ── */
+:root,[data-theme="light"]{
+  --bg:#F9FAFB;
+  --card:#FFFFFF;
+  --card2:#F3F4F6;
+  --border:#E5E7EB;
+  --text:#111827;
+  --text2:#374151;
+  --muted:#6B7280;
+  --input-bg:#F3F4F6;
+  --input-border:#E5E7EB;
+  --input-text:#111827;
   --shadow:0 4px 24px rgba(0,0,0,.10),0 1px 4px rgba(0,0,0,.06);
   --shadow-lg:0 12px 48px rgba(0,0,0,.15),0 4px 16px rgba(0,0,0,.08);
+  --panel-bg:rgba(255,255,255,.92);
+  --panel-border:rgba(0,0,0,.06);
+  --drawer-bg:#FFFFFF;
+  --chip-bg:#F3F4F6;
+  --chip-active-bg:#EFF6FF;
+  --chip-active-text:#1D4ED8;
+  --tile-filter:none;
 }
-html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,-apple-system,sans-serif}
-#map{position:absolute;inset:0}
+[data-theme="dark"]{
+  --bg:#0c1220;
+  --card:#141c2f;
+  --card2:#1a2540;
+  --border:#1f2d47;
+  --text:#E8EDF7;
+  --text2:#A8B8D0;
+  --muted:#5a6a84;
+  --input-bg:#0c1220;
+  --input-border:#1f2d47;
+  --input-text:#E8EDF7;
+  --shadow:0 4px 24px rgba(0,0,0,.45),0 1px 4px rgba(0,0,0,.3);
+  --shadow-lg:0 12px 48px rgba(0,0,0,.6),0 4px 16px rgba(0,0,0,.4);
+  --panel-bg:rgba(20,28,47,.96);
+  --panel-border:rgba(255,255,255,.04);
+  --drawer-bg:#141c2f;
+  --chip-bg:#1a2540;
+  --chip-active-bg:#1e3a6e;
+  --chip-active-text:#60A5FA;
+  --tile-filter:brightness(.72) saturate(.8);
+}
 
-/* ── top bar ── */
-.topbar{position:absolute;top:14px;left:14px;right:14px;z-index:500;display:flex;align-items:center;gap:10px;pointer-events:none}
+/* Brand + state colours – unchanged across themes */
+:root{
+  --primary:#1A56DB;--accent:#0EA5E9;--green:#10B981;--red:#EF4444;--amber:#F59E0B;
+}
+
+html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg)}
+#map{position:absolute;inset:0}
+[data-theme="dark"] .leaflet-tile{filter:var(--tile-filter)}
+
+/* ── Top bar ── */
+.topbar{position:absolute;top:14px;left:14px;right:14px;z-index:500;display:flex;align-items:center;gap:8px;pointer-events:none}
 .topbar>*{pointer-events:all}
-.tb-logo{background:var(--card);border-radius:50px;padding:9px 16px 9px 12px;display:flex;align-items:center;gap:8px;box-shadow:var(--shadow);font-weight:800;font-size:.9rem;color:var(--text)}
-.tb-logo-dot{width:28px;height:28px;border-radius:10px;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center}
+.tb-logo{background:var(--card);border-radius:50px;padding:9px 16px 9px 12px;display:flex;align-items:center;gap:8px;box-shadow:var(--shadow);font-weight:800;font-size:.9rem;color:var(--text);white-space:nowrap}
+.tb-logo-dot{width:28px;height:28px;border-radius:10px;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .tb-logo-dot svg{width:15px;height:15px;fill:none;stroke:#fff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
-.spacer{flex:1;pointer-events:none}
-.driver-count-badge{background:var(--card);border-radius:50px;padding:8px 14px;box-shadow:var(--shadow);font-size:.8rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px}
+.spacer{flex:1;min-width:0;pointer-events:none}
+.driver-count-badge{background:var(--card);border-radius:50px;padding:8px 14px;box-shadow:var(--shadow);font-size:.8rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px;cursor:pointer;transition:box-shadow .15s;white-space:nowrap;user-select:none}
+.driver-count-badge:hover{box-shadow:var(--shadow-lg)}
 .count-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0}
 .count-dot.pulse{animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
-.srv-pill{background:var(--card);border-radius:50px;padding:7px 13px;box-shadow:var(--shadow);font-size:.75rem;font-weight:600;display:flex;align-items:center;gap:6px;transition:all .3s}
+.srv-pill{background:var(--card);border-radius:50px;padding:7px 13px;box-shadow:var(--shadow);font-size:.75rem;font-weight:600;display:flex;align-items:center;gap:6px;transition:all .3s;white-space:nowrap}
 .srv-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--muted)}
 .srv-pill.ok .dot{background:var(--green);animation:pulse 2s infinite}
 .srv-pill.ok{color:var(--green)}
 .srv-pill.err{color:var(--red)}
 .srv-pill.err .dot{background:var(--red)}
+.theme-toggle{width:36px;height:36px;border-radius:50%;background:var(--card);border:none;box-shadow:var(--shadow);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:all .15s;flex-shrink:0}
+.theme-toggle:hover{box-shadow:var(--shadow-lg);transform:scale(1.05)}
+.user-pill{background:var(--card);border-radius:50px;padding:7px 12px;box-shadow:var(--shadow);font-size:.78rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap}
+.user-pill:hover .signout-label{text-decoration:underline}
+.signout-label{color:var(--muted);font-weight:400}
 
-/* ── floating buttons (right side) ── */
-.fab-col{position:absolute;bottom:200px;right:14px;z-index:500;display:flex;flex-direction:column;gap:10px}
-.fab{width:44px;height:44px;border-radius:14px;background:var(--card);border:none;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;font-size:1.1rem}
-.fab:hover{box-shadow:var(--shadow-lg);transform:scale(1.05)}
-.fab svg{width:20px;height:20px;fill:none;stroke:var(--primary);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+/* ── Left Panel ── */
+#left-panel{position:absolute;top:72px;left:14px;z-index:400;width:280px;display:flex;flex-direction:column;gap:10px;pointer-events:none}
+#left-panel>*{pointer-events:all}
+.lp-card{background:var(--panel-bg);border:1px solid var(--panel-border);border-radius:16px;padding:12px 14px;box-shadow:var(--shadow);backdrop-filter:blur(12px)}
 
-/* ── post job button ── */
-.post-job-btn{position:absolute;bottom:200px;left:14px;z-index:500;background:var(--amber);color:#fff;border:none;border-radius:16px;padding:12px 18px;font-size:.85rem;font-weight:700;box-shadow:0 4px 16px rgba(245,158,11,.4);cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .15s;font-family:'Segoe UI',sans-serif}
-.post-job-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(245,158,11,.45)}
+/* Search */
+.search-wrap{position:relative}
+.search-input{width:100%;background:var(--input-bg);border:1.5px solid var(--input-border);border-radius:12px;padding:11px 40px 11px 14px;font-size:.88rem;color:var(--input-text);font-family:'Segoe UI',sans-serif;outline:none;transition:border-color .15s}
+.search-input:focus{border-color:var(--primary)}
+.search-input::placeholder{color:var(--muted)}
+.search-icon{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;font-size:.95rem}
+.search-clear{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:2px;display:none}
+.autocomplete-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-lg);overflow:hidden;z-index:10;display:none}
+.autocomplete-item{padding:10px 14px;font-size:.85rem;color:var(--text);cursor:pointer;transition:background .1s;display:flex;align-items:center;gap:8px}
+.autocomplete-item:hover,.autocomplete-item.active{background:var(--card2)}
+.autocomplete-item .ai-icon{font-size:.9rem;flex-shrink:0}
+.autocomplete-item .ai-name{font-weight:600}
+.autocomplete-item .ai-region{font-size:.75rem;color:var(--muted);margin-top:1px}
 
-/* ── driver markers ── */
-.driver-marker-wrap{display:flex;flex-direction:column;align-items:center;cursor:pointer}
-.driver-marker-circle{width:46px;height:46px;border-radius:50%;border:3px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.25),0 0 0 5px rgba(26,86,219,.15);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.78rem;color:#fff;background:var(--primary);transition:transform .15s}
-.driver-marker-circle:hover{transform:scale(1.12)}
-.driver-marker-label{background:var(--primary);color:#fff;font-size:.58rem;font-weight:700;padding:2px 8px;border-radius:4px;margin-top:3px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+/* Radius chip */
+.radius-row{display:flex;align-items:center;gap:8px;margin-top:8px}
+.radius-label{font-size:.75rem;color:var(--muted);font-weight:500}
+.radius-chip{background:var(--chip-bg);border:1.5px solid var(--border);border-radius:20px;padding:5px 12px;font-size:.78rem;font-weight:700;color:var(--text);cursor:pointer;transition:all .15s;white-space:nowrap}
+.radius-chip:hover,.radius-chip.active{background:var(--chip-active-bg);border-color:var(--primary);color:var(--chip-active-text)}
+.radius-clear{font-size:.7rem;color:var(--muted);cursor:pointer;transition:color .15s;margin-left:auto;white-space:nowrap}
+.radius-clear:hover{color:var(--red)}
 
-/* ── job markers ── */
-.job-marker-wrap{display:flex;flex-direction:column;align-items:center;cursor:pointer}
-.job-marker-circle{width:42px;height:42px;border-radius:12px;border:3px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.25),0 0 0 5px rgba(245,158,11,.2);display:flex;align-items:center;justify-content:center;font-size:1.1rem;background:var(--amber);transition:transform .15s}
-.job-marker-circle:hover{transform:scale(1.12)}
-.job-marker-label{background:var(--amber);color:#fff;font-size:.58rem;font-weight:700;padding:2px 8px;border-radius:4px;margin-top:3px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.2);max-width:90px;overflow:hidden;text-overflow:ellipsis}
+/* Radius popup */
+.radius-popup{position:absolute;left:0;top:calc(100% + 8px);width:260px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow-lg);z-index:20;display:none}
+.radius-popup.open{display:block}
+.radius-popup-title{font-size:.78rem;font-weight:700;color:var(--text);margin-bottom:10px}
+.radius-slider{width:100%;accent-color:var(--primary);height:4px;cursor:pointer}
+.radius-val-row{display:flex;justify-content:space-between;margin-top:6px;font-size:.72rem;color:var(--muted)}
+.radius-cur{font-size:.82rem;font-weight:800;color:var(--primary);text-align:center;margin-top:4px}
 
-/* ── my location dot ── */
-.me-dot{width:18px;height:18px;border-radius:50%;background:var(--primary);border:3px solid #fff;box-shadow:0 0 0 6px rgba(26,86,219,.2),0 4px 12px rgba(0,0,0,.2)}
+/* Post Job button */
+.post-job-btn{width:100%;background:var(--amber);color:#fff;border:none;border-radius:14px;padding:12px;font-size:.88rem;font-weight:700;box-shadow:0 4px 16px rgba(245,158,11,.35);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s;font-family:'Segoe UI',sans-serif}
+.post-job-btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(245,158,11,.45)}
+.post-job-btn:active{transform:translateY(0)}
 
-/* ── sheet ── */
-.sheet-backdrop{position:absolute;inset:0;z-index:600;background:rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .25s}
+/* ── Right Drawer ── */
+#drawer-backdrop{position:absolute;inset:0;z-index:550;background:rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:opacity .25s}
+#drawer-backdrop.visible{opacity:1;pointer-events:all}
+#right-drawer{position:absolute;top:0;right:0;bottom:0;width:320px;z-index:551;background:var(--drawer-bg);box-shadow:-8px 0 48px rgba(0,0,0,.25);transform:translateX(100%);transition:transform .32s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column}
+#right-drawer.open{transform:translateX(0)}
+.drawer-header{padding:18px 18px 0;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.drawer-title{font-size:1rem;font-weight:800;color:var(--text);flex:1}
+.drawer-close{width:32px;height:32px;border-radius:10px;background:var(--card2);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:1.1rem;transition:all .15s}
+.drawer-close:hover{background:var(--border);color:var(--text)}
+.drawer-chips{display:flex;gap:6px;padding:12px 18px;flex-shrink:0}
+.d-chip{padding:6px 14px;border-radius:20px;font-size:.78rem;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:var(--chip-bg);color:var(--muted);transition:all .15s}
+.d-chip.active{background:var(--chip-active-bg);border-color:var(--primary);color:var(--chip-active-text)}
+.drawer-divider{height:1px;background:var(--border);margin:0 18px;flex-shrink:0}
+.drawer-list{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.drawer-list::-webkit-scrollbar{width:4px}
+.drawer-list::-webkit-scrollbar-track{background:transparent}
+.drawer-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* Driver card */
+.driver-card{background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:12px 14px;cursor:pointer;transition:all .15s}
+.driver-card:hover{border-color:var(--primary);background:var(--chip-active-bg)}
+.dc-row{display:flex;align-items:center;gap:10px}
+.dc-avatar{width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:800;color:#fff;flex-shrink:0}
+.dc-info{flex:1;min-width:0}
+.dc-name{font-size:.88rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dc-dest{font-size:.72rem;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dc-dist{font-size:.72rem;font-weight:700;color:var(--primary);white-space:nowrap;flex-shrink:0}
+.dc-actions{display:flex;gap:6px;margin-top:10px}
+.dc-btn{flex:1;padding:7px 6px;border-radius:10px;border:none;font-size:.75rem;font-weight:700;cursor:pointer;font-family:'Segoe UI',sans-serif;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px}
+.dc-btn.call{background:#dcfce7;color:#16a34a}
+[data-theme="dark"] .dc-btn.call{background:#0d2e1a;color:#34d399}
+.dc-btn.call:hover{background:#bbf7d0}
+[data-theme="dark"] .dc-btn.call:hover{background:#133d24}
+.dc-btn.track{background:var(--chip-active-bg);color:var(--chip-active-text);border:1px solid var(--border)}
+.dc-btn.track:hover{border-color:var(--primary)}
+.drawer-empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:.85rem;line-height:1.6}
+.drawer-empty-icon{font-size:2.5rem;margin-bottom:10px}
+
+/* ── Bottom sheet ── */
+.sheet-backdrop{position:absolute;inset:0;z-index:600;background:rgba(0,0,0,.28);opacity:0;pointer-events:none;transition:opacity .25s}
 .sheet-backdrop.visible{opacity:1;pointer-events:all}
-.sheet{position:absolute;bottom:0;left:0;right:0;z-index:601;background:var(--card);border-radius:24px 24px 0 0;padding:0 0 env(safe-area-inset-bottom,16px);box-shadow:0 -8px 48px rgba(0,0,0,.15);transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
+.sheet{position:absolute;bottom:0;left:0;right:0;z-index:601;background:var(--card);border-radius:24px 24px 0 0;padding:0 0 env(safe-area-inset-bottom,16px);box-shadow:0 -8px 48px rgba(0,0,0,.2);transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
 .sheet.open{transform:translateY(0)}
 .sheet-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 0}
 .sheet-content{padding:20px 22px 24px}
-
-/* sheet header */
 .sheet-header{display:flex;align-items:center;gap:14px;margin-bottom:16px}
 .sheet-avatar{width:52px;height:52px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:800;color:#fff;flex-shrink:0}
 .sheet-avatar.driver{background:linear-gradient(135deg,var(--primary),var(--accent))}
@@ -78,35 +180,30 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,-apple-sy
 .sheet-title{font-size:1.15rem;font-weight:800;color:var(--text);line-height:1.2}
 .sheet-subtitle{font-size:.78rem;color:var(--muted);margin-top:3px;display:flex;align-items:center;gap:5px}
 .online-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;flex-shrink:0}
-
-/* info rows */
-.sheet-info-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--light)}
+.sheet-info-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--card2)}
 .sheet-info-row:last-of-type{border-bottom:none}
 .sheet-info-icon{font-size:1rem;flex-shrink:0;margin-top:1px}
 .sheet-info-text{flex:1;font-size:.88rem;color:var(--text);font-weight:500;line-height:1.4}
 .sheet-info-text small{display:block;color:var(--muted);font-size:.75rem;font-weight:400;margin-top:1px}
-
-/* stat pills */
 .sheet-stats{display:flex;gap:8px;margin:14px 0}
-.sheet-stat{flex:1;background:var(--light);border-radius:12px;padding:10px 8px;text-align:center}
+.sheet-stat{flex:1;background:var(--card2);border-radius:12px;padding:10px 8px;text-align:center}
 .sheet-stat-val{font-size:.95rem;font-weight:800;color:var(--text)}
 .sheet-stat-lbl{font-size:.65rem;color:var(--muted);margin-top:2px}
 .sheet-stat-val.loading{color:var(--muted);font-size:.75rem}
-
-/* action buttons */
 .sheet-actions{display:flex;gap:10px;margin-top:16px}
 .sheet-btn{flex:1;padding:14px 10px;border-radius:14px;border:none;font-size:.88rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .15s;font-family:'Segoe UI',sans-serif;text-decoration:none}
 .sheet-btn.primary{background:var(--primary);color:#fff;box-shadow:0 4px 16px rgba(26,86,219,.3)}
 .sheet-btn.primary:hover{background:#1347c8}
 .sheet-btn.call{background:#dcfce7;color:#16a34a}
+[data-theme="dark"] .sheet-btn.call{background:#0d2e1a;color:#34d399}
 .sheet-btn.call:hover{background:#bbf7d0}
 .sheet-btn.amber{background:var(--amber);color:#fff;box-shadow:0 4px 14px rgba(245,158,11,.3)}
 .sheet-btn.amber:hover{background:#d97706}
 .sheet-btn:active{transform:scale(.97)}
 .sheet-btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
 
-/* ── route bar ── */
-.route-bar{position:absolute;bottom:0;left:0;right:0;z-index:500;background:var(--card);padding:14px 18px calc(14px + env(safe-area-inset-bottom,0px));border-radius:20px 20px 0 0;box-shadow:0 -4px 24px rgba(0,0,0,.1);transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);display:flex;align-items:center;gap:14px}
+/* ── Route bar ── */
+.route-bar{position:absolute;bottom:0;left:0;right:0;z-index:500;background:var(--card);padding:14px 18px calc(14px + env(safe-area-inset-bottom,0px));border-radius:20px 20px 0 0;box-shadow:0 -4px 24px rgba(0,0,0,.15);transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);display:flex;align-items:center;gap:14px}
 .route-bar.visible{transform:translateY(0)}
 .route-info{flex:1}
 .route-info strong{font-size:1rem;font-weight:800;color:var(--text)}
@@ -114,44 +211,61 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,-apple-sy
 .route-close{padding:9px 16px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--muted);font-size:.82rem;font-weight:700;cursor:pointer;font-family:'Segoe UI',sans-serif;white-space:nowrap}
 .route-close:hover{border-color:var(--text);color:var(--text)}
 
-/* ── modal overlay ── */
-.modal-overlay{position:absolute;inset:0;z-index:700;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+/* ── Floating buttons ── */
+.fab-col{position:absolute;bottom:200px;right:14px;z-index:400;display:flex;flex-direction:column;gap:10px}
+.fab{width:44px;height:44px;border-radius:14px;background:var(--card);border:none;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s}
+.fab:hover{box-shadow:var(--shadow-lg);transform:scale(1.05)}
+.fab svg{width:20px;height:20px;fill:none;stroke:var(--primary);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── Markers ── */
+.driver-marker-wrap{display:flex;flex-direction:column;align-items:center;cursor:pointer}
+.driver-marker-circle{width:44px;height:44px;border-radius:50%;border:3px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.28),0 0 0 4px rgba(26,86,219,.18);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.75rem;color:#fff;background:var(--primary);transition:transform .15s}
+.driver-marker-circle:hover{transform:scale(1.12)}
+.driver-marker-label{background:var(--primary);color:#fff;font-size:.58rem;font-weight:700;padding:2px 8px;border-radius:4px;margin-top:3px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.job-marker-wrap{display:flex;flex-direction:column;align-items:center;cursor:pointer}
+.job-marker-circle{width:40px;height:40px;border-radius:12px;border:3px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.25),0 0 0 4px rgba(245,158,11,.2);display:flex;align-items:center;justify-content:center;font-size:1rem;background:var(--amber);transition:transform .15s}
+.job-marker-circle:hover{transform:scale(1.12)}
+.job-marker-label{background:var(--amber);color:#fff;font-size:.58rem;font-weight:700;padding:2px 8px;border-radius:4px;margin-top:3px;white-space:nowrap;max-width:88px;overflow:hidden;text-overflow:ellipsis;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.me-dot{width:18px;height:18px;border-radius:50%;background:var(--primary);border:3px solid #fff;box-shadow:0 0 0 6px rgba(26,86,219,.2),0 4px 12px rgba(0,0,0,.2)}
+
+/* ── Modal overlay ── */
+.modal-overlay{position:absolute;inset:0;z-index:700;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
 .modal-overlay.visible{opacity:1;pointer-events:all}
 .modal{background:var(--card);border-radius:24px 24px 0 0;padding:28px 24px calc(28px + env(safe-area-inset-bottom,0px));width:100%;max-width:600px;transform:translateY(40px);transition:transform .3s cubic-bezier(.4,0,.2,1)}
 .modal-overlay.visible .modal{transform:translateY(0)}
 .modal-title{font-size:1.2rem;font-weight:800;color:var(--text);margin-bottom:6px}
 .modal-sub{font-size:.82rem;color:var(--muted);margin-bottom:22px;line-height:1.5}
 .modal-label{font-size:.75rem;font-weight:700;color:var(--muted);letter-spacing:.5px;margin-bottom:6px;margin-top:14px}
-.modal-input{width:100%;background:var(--light);border:1.5px solid var(--border);border-radius:12px;padding:13px 16px;font-size:.95rem;color:var(--text);font-family:'Segoe UI',sans-serif;outline:none;transition:border-color .15s}
+.modal-input{width:100%;background:var(--input-bg);border:1.5px solid var(--input-border);border-radius:12px;padding:13px 16px;font-size:.95rem;color:var(--input-text);font-family:'Segoe UI',sans-serif;outline:none;transition:border-color .15s}
 .modal-input:focus{border-color:var(--primary)}
-.modal-input::placeholder{color:#9CA3AF}
+.modal-input::placeholder{color:var(--muted)}
 .modal-actions{display:flex;gap:10px;margin-top:22px}
 .modal-btn{flex:1;padding:14px;border-radius:14px;border:none;font-size:.9rem;font-weight:700;cursor:pointer;font-family:'Segoe UI',sans-serif;transition:all .15s}
 .modal-btn.primary{background:var(--amber);color:#fff;box-shadow:0 4px 14px rgba(245,158,11,.35)}
 .modal-btn.primary:hover{background:#d97706}
 .modal-btn.primary:disabled{opacity:.55;cursor:not-allowed}
-.modal-btn.secondary{background:var(--light);color:var(--muted)}
+.modal-btn.secondary{background:var(--card2);color:var(--muted)}
 .modal-btn.secondary:hover{background:var(--border)}
 .modal-error{font-size:.8rem;color:var(--red);margin-top:10px;display:none}
 .modal-error.visible{display:block}
 
-/* ── auth overlay ── */
-.auth-overlay{position:fixed;inset:0;z-index:900;background:#111827;display:flex;align-items:center;justify-content:center;padding:20px}
-.auth-card{background:#1F2937;border-radius:24px;padding:32px 28px;width:100%;max-width:420px;box-shadow:0 24px 80px rgba(0,0,0,.5)}
+/* ── Auth overlay ── */
+.auth-overlay{position:fixed;inset:0;z-index:900;background:#0c1220;display:flex;align-items:center;justify-content:center;padding:20px}
+.auth-card{background:#141c2f;border-radius:24px;padding:32px 28px;width:100%;max-width:420px;box-shadow:0 24px 80px rgba(0,0,0,.6)}
 .auth-logo{text-align:center;margin-bottom:24px}
 .auth-logo-emoji{font-size:44px;display:block;margin-bottom:8px}
 .auth-logo-title{font-size:26px;font-weight:900;color:#F59E0B;letter-spacing:.5px}
 .auth-logo-sub{font-size:12px;color:#6B7280;margin-top:4px}
-.auth-toggle{display:flex;background:#111827;border-radius:12px;padding:4px;margin-bottom:20px}
+.auth-toggle{display:flex;background:#0c1220;border-radius:12px;padding:4px;margin-bottom:20px}
 .auth-toggle-btn{flex:1;padding:9px;border:none;background:transparent;border-radius:9px;font-size:.85rem;font-weight:700;color:#6B7280;cursor:pointer;font-family:'Segoe UI',sans-serif;transition:all .15s}
 .auth-toggle-btn.active{background:#F59E0B;color:#111827}
 .auth-role-row{display:flex;gap:10px;margin-bottom:18px}
-.auth-role-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border:2px solid transparent;border-radius:12px;background:#111827;font-size:.85rem;font-weight:700;color:#6B7280;cursor:pointer;font-family:'Segoe UI',sans-serif;transition:all .15s}
+.auth-role-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border:2px solid transparent;border-radius:12px;background:#0c1220;font-size:.85rem;font-weight:700;color:#6B7280;cursor:pointer;font-family:'Segoe UI',sans-serif;transition:all .15s}
 .auth-role-btn.active{border-color:#F59E0B;color:#F59E0B}
 .auth-label{font-size:.7rem;font-weight:700;color:#6B7280;letter-spacing:.5px;margin-bottom:6px;margin-top:14px;text-transform:uppercase}
-.auth-input{width:100%;background:#111827;border:1.5px solid #374151;border-radius:12px;padding:13px 16px;font-size:.9rem;color:#F9FAFB;font-family:'Segoe UI',sans-serif;outline:none;transition:border-color .15s;box-sizing:border-box}
+.auth-input{width:100%;background:#0c1220;border:1.5px solid #1f2d47;border-radius:12px;padding:13px 16px;font-size:.9rem;color:#E8EDF7;font-family:'Segoe UI',sans-serif;outline:none;transition:border-color .15s;box-sizing:border-box}
 .auth-input:focus{border-color:#F59E0B}
-.auth-input::placeholder{color:#6B7280}
+.auth-input::placeholder{color:#5a6a84}
 .auth-submit-btn{width:100%;margin-top:18px;padding:15px;background:#F59E0B;border:none;border-radius:14px;font-size:.95rem;font-weight:900;color:#111827;cursor:pointer;font-family:'Segoe UI',sans-serif;transition:all .15s}
 .auth-submit-btn:hover{background:#d97706}
 .auth-submit-btn:disabled{opacity:.55;cursor:not-allowed}
@@ -159,17 +273,18 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,-apple-sy
 .auth-err.visible{display:block}
 .auth-switch{text-align:center;margin-top:14px;font-size:.8rem;color:#6B7280}
 .auth-switch a{color:#F59E0B;font-weight:700;cursor:pointer;text-decoration:none}
-/* user pill in topbar */
-.user-pill{background:var(--card);border-radius:50px;padding:7px 12px;box-shadow:var(--shadow);font-size:.78rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;cursor:pointer}
-.user-pill:hover .signout-label{text-decoration:underline}
-.signout-label{color:var(--muted);font-weight:400}
 
-/* ── leaflet overrides ── */
+/* ── Toast ── */
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 18px;font-size:.82rem;font-weight:600;color:var(--text);box-shadow:var(--shadow-lg);z-index:800;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── Leaflet overrides ── */
 .leaflet-control-zoom{border:none!important;box-shadow:var(--shadow)!important}
 .leaflet-control-zoom a{background:var(--card)!important;color:var(--text)!important;border:none!important;border-bottom:1px solid var(--border)!important;width:36px!important;height:36px!important;line-height:36px!important}
 .leaflet-control-zoom a:hover{color:var(--primary)!important}
 .leaflet-bar{border-radius:12px!important;overflow:hidden}
-.leaflet-control-attribution{background:rgba(255,255,255,.75)!important;backdrop-filter:blur(4px);border-radius:8px 0 0 0!important;font-size:.6rem!important}
+.leaflet-control-attribution{background:rgba(20,28,47,.65)!important;color:#5a6a84!important;backdrop-filter:blur(4px);border-radius:8px 0 0 0!important;font-size:.6rem!important}
+[data-theme="light"] .leaflet-control-attribution{background:rgba(255,255,255,.75)!important;color:#6B7280!important}
 </style>
 </head>
 <body>
@@ -184,30 +299,76 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,-apple-sy
     TransportX
   </div>
   <div class="spacer"></div>
-  <div class="driver-count-badge" id="driver-count-badge">
+  <div class="driver-count-badge" id="driver-count-badge" onclick="openDrawer()">
     <span class="count-dot" id="count-dot"></span>
     <span id="count-label">Looking…</span>
   </div>
   <div class="srv-pill err" id="srv-pill">
     <span class="dot"></span><span id="srv-label">Connecting</span>
   </div>
+  <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌙</button>
   <div class="user-pill" id="user-pill" style="display:none" onclick="signOut()">
     <span id="user-pill-name"></span>
     <span class="signout-label">Sign out</span>
   </div>
 </div>
 
-<!-- Floating action buttons (right) -->
+<!-- Left Panel -->
+<div id="left-panel">
+  <!-- Search card -->
+  <div class="lp-card">
+    <div class="search-wrap" id="search-wrap">
+      <input class="search-input" id="city-search" placeholder="Search city or area…" autocomplete="off" oninput="onSearchInput()" onfocus="onSearchFocus()"/>
+      <span class="search-icon" id="search-icon">🔍</span>
+      <button class="search-clear" id="search-clear" onclick="clearSearch()">✕</button>
+      <div class="autocomplete-dropdown" id="autocomplete-dropdown"></div>
+    </div>
+    <div class="radius-row" id="radius-row" style="display:none">
+      <span class="radius-label">Radius</span>
+      <div style="position:relative">
+        <button class="radius-chip active" id="radius-chip" onclick="toggleRadiusPopup()">📍 <span id="radius-display">25 mi</span></button>
+        <div class="radius-popup" id="radius-popup">
+          <div class="radius-popup-title">Set search radius</div>
+          <input type="range" class="radius-slider" id="radius-slider" min="5" max="150" value="25" oninput="onRadiusChange(this.value)"/>
+          <div class="radius-val-row"><span>5 mi</span><span>150 mi</span></div>
+          <div class="radius-cur" id="radius-cur">25 miles</div>
+        </div>
+      </div>
+      <span class="radius-clear" onclick="clearRadius()">✕ Clear area</span>
+    </div>
+  </div>
+  <!-- Post Job card -->
+  <div class="lp-card">
+    <button class="post-job-btn" id="post-job-btn">
+      <span>📦</span> Post a Job
+    </button>
+  </div>
+</div>
+
+<!-- Right drawer backdrop -->
+<div id="drawer-backdrop" onclick="closeDrawer()"></div>
+
+<!-- Right drawer -->
+<div id="right-drawer">
+  <div class="drawer-header">
+    <div class="drawer-title">Drivers Online</div>
+    <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="drawer-chips">
+    <button class="d-chip active" data-filter="all" onclick="setDrawerFilter('all')">All</button>
+    <button class="d-chip" data-filter="area" onclick="setDrawerFilter('area')">By Area</button>
+    <button class="d-chip" data-filter="nearby" onclick="setDrawerFilter('nearby')">Near Me</button>
+  </div>
+  <div class="drawer-divider"></div>
+  <div class="drawer-list" id="drawer-list"></div>
+</div>
+
+<!-- Floating buttons -->
 <div class="fab-col">
   <button class="fab" id="locate-btn" title="Centre on my location">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8" stroke-dasharray="4 2"/></svg>
   </button>
 </div>
-
-<!-- Post a job button (left) -->
-<button class="post-job-btn" id="post-job-btn">
-  <span>📦</span> Post a Job
-</button>
 
 <!-- Sheet backdrop -->
 <div class="sheet-backdrop" id="backdrop"></div>
@@ -258,19 +419,16 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,-apple-sy
       <button class="auth-toggle-btn active" id="auth-tab-login" onclick="setAuthMode('login')">Sign In</button>
       <button class="auth-toggle-btn" id="auth-tab-register" onclick="setAuthMode('register')">Register</button>
     </div>
-    <!-- Register: role -->
     <div id="auth-role-section" style="display:none">
       <div class="auth-role-row">
         <button class="auth-role-btn active" id="role-btn-customer" onclick="setAuthRole('customer')">📦 Customer</button>
         <button class="auth-role-btn" id="role-btn-driver" onclick="setAuthRole('driver')">🚛 Driver</button>
       </div>
     </div>
-    <!-- Register: name -->
     <div id="auth-name-section" style="display:none">
       <div class="auth-label">Full Name</div>
       <input class="auth-input" id="auth-name" placeholder="John Smith" autocomplete="name"/>
     </div>
-    <!-- Register: phone -->
     <div id="auth-phone-section" style="display:none">
       <div class="auth-label">Phone Number</div>
       <input class="auth-input" id="auth-phone" placeholder="+44 7911 123456" type="tel"/>
@@ -287,6 +445,9 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,-apple-sy
   </div>
 </div>
 
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
 <script>
 // ── Map ──────────────────────────────────────────────────────────────────────
 const map = L.map('map', { zoomControl: false }).setView([54.5, -3.2], 6);
@@ -295,47 +456,60 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r
   attribution: '© OpenStreetMap © CARTO', maxZoom: 19, subdomains: 'abcd',
 }).addTo(map);
 
+// ── Theme ─────────────────────────────────────────────────────────────────────
+let currentTheme = localStorage.getItem('tx_theme') || 'dark';
+applyTheme(currentTheme);
+function applyTheme(t) {
+  currentTheme = t;
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('theme-toggle').textContent = t === 'dark' ? '☀️' : '🌙';
+  localStorage.setItem('tx_theme', t);
+}
+function toggleTheme() {
+  applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+}
+
 // ── State ────────────────────────────────────────────────────────────────────
 let myLat = null, myLng = null;
 let myMarker = null, myCircle = null;
-let selectedItem      = null;   // { type: 'driver'|'job', data }
-let activeRouteLine   = null;   // leaflet polyline currently shown
-const driverMarkers   = {};     // driverId → L.marker
-const driverRouteLines = {};    // driverId → L.polyline (GPS → destination)
-const jobMarkers      = {};     // jobId    → L.marker
+let selectedItem      = null;
+let activeRouteLine   = null;
+let radiusCircle      = null;
+let radiusHandleMarker = null;
+let searchedCity      = null;   // { name, lat, lng }
+let radiusMiles       = 25;
+let drawerFilter      = 'all';
+const driverMarkers   = {};
+const driverRouteLines = {};
+const jobMarkers      = {};
 
 // ── Socket.IO ────────────────────────────────────────────────────────────────
 const socket = io({ path: '/socket.io' });
-
 socket.on('connect', () => {
   setSrv('ok', 'Live');
   socket.emit('customer:join');
 });
 socket.on('disconnect', () => setSrv('err', 'Reconnecting…'));
-
 socket.on('drivers:initial', (drivers) => {
   drivers.forEach(d => addOrUpdateDriver(d));
   updateDriverCount();
   const valid = drivers.filter(d => d.lat && d.lng);
   if (!valid.length) fitUK(); else fitDrivers(valid);
 });
-socket.on('driver:online', (d) => { addOrUpdateDriver(d); updateDriverCount(); });
+socket.on('driver:online', (d) => { addOrUpdateDriver(d); updateDriverCount(); renderDrawerList(); });
 socket.on('driver:location', (d) => {
   moveDriver(d);
   if (selectedItem?.type === 'driver' && selectedItem.data.driverId === d.driverId) {
-    selectedItem.data.lat = d.lat;
-    selectedItem.data.lng = d.lng;
+    selectedItem.data.lat = d.lat; selectedItem.data.lng = d.lng;
     refreshDriverStats(d.lat, d.lng);
   }
 });
 socket.on('driver:offline', ({ driverId }) => {
-  removeDriver(driverId);
-  updateDriverCount();
+  removeDriver(driverId); updateDriverCount(); renderDrawerList();
   if (selectedItem?.type === 'driver' && selectedItem.data.driverId === driverId) closeSheet();
 });
-
 socket.on('jobs:initial', (list) => list.forEach(addOrUpdateJob));
-socket.on('job:new', (job) => { addOrUpdateJob(job); });
+socket.on('job:new', (job) => { addOrUpdateJob(job); showToast('📦 New job posted nearby'); });
 
 // REST fallback
 async function pollDrivers() {
@@ -366,32 +540,24 @@ function makeDriverIcon(name) {
     iconSize: [46, 64], iconAnchor: [23, 60],
   });
 }
-
 function addOrUpdateDriver(d) {
   const { driverId, name, phone, lat, lng, destination } = d;
   if (!lat || !lng) return;
-
   if (driverMarkers[driverId]) {
-    const existing = driverMarkers[driverId]._txData;
+    const ex = driverMarkers[driverId]._txData;
     driverMarkers[driverId].setLatLng([lat, lng]);
-    driverMarkers[driverId]._txData = {
-      ...existing, lat, lng,
-      phone:       phone       !== undefined ? phone       : existing.phone,
-      destination: destination !== undefined ? destination : existing.destination,
-    };
+    driverMarkers[driverId]._txData = { ...ex, lat, lng,
+      phone: phone !== undefined ? phone : ex.phone,
+      destination: destination !== undefined ? destination : ex.destination };
   } else {
     const mkr = L.marker([lat, lng], { icon: makeDriverIcon(name) }).addTo(map);
     mkr._txData = { driverId, name, phone: phone || null, lat, lng, destination: destination || null };
     mkr.on('click', () => openDriverSheet(mkr._txData));
     driverMarkers[driverId] = mkr;
   }
-
   const data = driverMarkers[driverId]._txData;
   drawDriverRoute(driverId, lat, lng, data.destination);
-  document.getElementById('post-job-btn').style.display = '';
 }
-
-// Location-only update (no phone/destination change)
 function moveDriver({ driverId, lat, lng }) {
   if (!driverMarkers[driverId]) return;
   driverMarkers[driverId].setLatLng([lat, lng]);
@@ -399,31 +565,26 @@ function moveDriver({ driverId, lat, lng }) {
   driverMarkers[driverId]._txData.lng = lng;
   drawDriverRoute(driverId, lat, lng, driverMarkers[driverId]._txData.destination);
 }
-
 function drawDriverRoute(driverId, lat, lng, destination) {
-  if (driverRouteLines[driverId]) {
-    map.removeLayer(driverRouteLines[driverId]);
-    delete driverRouteLines[driverId];
-  }
+  if (driverRouteLines[driverId]) { map.removeLayer(driverRouteLines[driverId]); delete driverRouteLines[driverId]; }
   if (destination?.lat && destination?.lng) {
     driverRouteLines[driverId] = L.polyline(
       [[lat, lng], [destination.lat, destination.lng]],
-      { color: '#1A56DB', weight: 2.5, opacity: 0.4, dashArray: '10 7' }
+      { color: '#1A56DB', weight: 2.5, opacity: 0.35, dashArray: '10 7' }
     ).addTo(map);
   }
 }
-
 function removeDriver(driverId) {
   if (driverMarkers[driverId])    { map.removeLayer(driverMarkers[driverId]);    delete driverMarkers[driverId]; }
   if (driverRouteLines[driverId]) { map.removeLayer(driverRouteLines[driverId]); delete driverRouteLines[driverId]; }
 }
-
 function updateDriverCount() {
-  const n   = Object.keys(driverMarkers).length;
+  const n = Object.keys(driverMarkers).length;
   const dot = document.getElementById('count-dot');
   const lbl = document.getElementById('count-label');
   if (n === 0) { dot.classList.remove('pulse'); lbl.textContent = 'No drivers online'; }
   else         { dot.classList.add('pulse');    lbl.textContent = `${n} driver${n !== 1 ? 's' : ''} online`; }
+  renderDrawerList();
 }
 
 // ── Job markers ───────────────────────────────────────────────────────────────
@@ -438,39 +599,274 @@ function makeJobIcon(name) {
     iconSize: [42, 62], iconAnchor: [21, 58],
   });
 }
-
 function addOrUpdateJob(job) {
   if (!job.pickup?.lat || !job.pickup?.lng) return;
-  if (jobMarkers[job.jobId]) return;  // already on map
+  if (jobMarkers[job.jobId]) return;
   const mkr = L.marker([job.pickup.lat, job.pickup.lng], { icon: makeJobIcon(job.pickup.name) }).addTo(map);
   mkr._txData = job;
   mkr.on('click', () => openJobSheet(mkr._txData));
   jobMarkers[job.jobId] = mkr;
 }
 
+// ── Drawer ────────────────────────────────────────────────────────────────────
+function openDrawer() {
+  document.getElementById('right-drawer').classList.add('open');
+  document.getElementById('drawer-backdrop').classList.add('visible');
+  renderDrawerList();
+}
+function closeDrawer() {
+  document.getElementById('right-drawer').classList.remove('open');
+  document.getElementById('drawer-backdrop').classList.remove('visible');
+}
+function setDrawerFilter(f) {
+  drawerFilter = f;
+  document.querySelectorAll('.d-chip').forEach(c => c.classList.toggle('active', c.dataset.filter === f));
+  renderDrawerList();
+}
+function renderDrawerList() {
+  const list = document.getElementById('drawer-list');
+  const drivers = Object.values(driverMarkers).map(m => m._txData);
+  let filtered = drivers;
+
+  if (drawerFilter === 'area' && searchedCity) {
+    const R = radiusMiles * 1609.34;
+    filtered = drivers.filter(d => {
+      const dy = (d.lat - searchedCity.lat) * 111139;
+      const dx = (d.lng - searchedCity.lng) * 111139 * Math.cos(searchedCity.lat * Math.PI / 180);
+      return Math.sqrt(dx*dx + dy*dy) <= R;
+    });
+  } else if (drawerFilter === 'nearby' && myLat !== null) {
+    filtered = drivers.filter(d => {
+      const dy = (d.lat - myLat) * 111139;
+      const dx = (d.lng - myLng) * 111139 * Math.cos(myLat * Math.PI / 180);
+      return Math.sqrt(dx*dx + dy*dy) <= 80467; // 50 miles
+    });
+  }
+
+  if (!filtered.length) {
+    const msg = drawerFilter === 'area' && !searchedCity
+      ? 'Search a city to filter by area'
+      : drawerFilter === 'nearby' && myLat === null
+      ? 'Enable location to see nearby drivers'
+      : 'No drivers match this filter';
+    list.innerHTML = `<div class="drawer-empty"><div class="drawer-empty-icon">🚛</div>${msg}</div>`;
+    return;
+  }
+
+  // Sort by distance to my location if available
+  if (myLat !== null) {
+    filtered.sort((a, b) => {
+      const da = Math.hypot((a.lat - myLat)*111139, (a.lng - myLng)*111139*Math.cos(myLat*Math.PI/180));
+      const db = Math.hypot((b.lat - myLat)*111139, (b.lng - myLng)*111139*Math.cos(myLat*Math.PI/180));
+      return da - db;
+    });
+  }
+
+  list.innerHTML = filtered.map(d => {
+    const ini = (d.name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+    const dest = d.destination ? `→ ${d.destination.name}` : 'No destination set';
+    let distLabel = '';
+    if (myLat !== null) {
+      const m = Math.hypot((d.lat-myLat)*111139, (d.lng-myLng)*111139*Math.cos(myLat*Math.PI/180));
+      distLabel = m > 1609 ? `${(m/1609.34).toFixed(1)} mi` : `${Math.round(m)} m`;
+    }
+    const callHtml = d.phone
+      ? `<a class="dc-btn call" href="tel:${d.phone}">📞 Call</a>`
+      : '';
+    return `<div class="driver-card" onclick="focusDriver('${d.driverId}')">
+      <div class="dc-row">
+        <div class="dc-avatar">${ini}</div>
+        <div class="dc-info">
+          <div class="dc-name">${d.name}</div>
+          <div class="dc-dest">${dest}</div>
+        </div>
+        ${distLabel ? `<div class="dc-dist">${distLabel}</div>` : ''}
+      </div>
+      <div class="dc-actions">
+        ${callHtml}
+        <button class="dc-btn track" onclick="event.stopPropagation();trackDriver('${d.driverId}')">🗺️ Track</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function focusDriver(driverId) {
+  const m = driverMarkers[driverId];
+  if (!m) return;
+  closeDrawer();
+  map.flyTo([m._txData.lat, m._txData.lng], 14, { duration: 1.2 });
+  setTimeout(() => openDriverSheet(m._txData), 600);
+}
+function trackDriver(driverId) {
+  const m = driverMarkers[driverId];
+  if (!m) return;
+  closeDrawer();
+  showRouteToDriver(m._txData);
+}
+
+// ── City search ───────────────────────────────────────────────────────────────
+let searchTimeout = null;
+let searchResults = [];
+
+const UK_CITIES = [
+  { name: 'London', region: 'England', lat: 51.5074, lng: -0.1278 },
+  { name: 'Manchester', region: 'England', lat: 53.4808, lng: -2.2426 },
+  { name: 'Birmingham', region: 'England', lat: 52.4862, lng: -1.8904 },
+  { name: 'Leeds', region: 'England', lat: 53.8008, lng: -1.5491 },
+  { name: 'Glasgow', region: 'Scotland', lat: 55.8642, lng: -4.2518 },
+  { name: 'Liverpool', region: 'England', lat: 53.4084, lng: -2.9916 },
+  { name: 'Sheffield', region: 'England', lat: 53.3811, lng: -1.4701 },
+  { name: 'Edinburgh', region: 'Scotland', lat: 55.9533, lng: -3.1883 },
+  { name: 'Bristol', region: 'England', lat: 51.4545, lng: -2.5879 },
+  { name: 'Cardiff', region: 'Wales', lat: 51.4816, lng: -3.1791 },
+  { name: 'Leicester', region: 'England', lat: 52.6369, lng: -1.1398 },
+  { name: 'Coventry', region: 'England', lat: 52.4068, lng: -1.5197 },
+  { name: 'Nottingham', region: 'England', lat: 52.9548, lng: -1.1581 },
+  { name: 'Newcastle', region: 'England', lat: 54.9783, lng: -1.6178 },
+  { name: 'Bradford', region: 'England', lat: 53.7960, lng: -1.7594 },
+  { name: 'Stoke-on-Trent', region: 'England', lat: 53.0027, lng: -2.1794 },
+  { name: 'Southampton', region: 'England', lat: 50.9097, lng: -1.4044 },
+  { name: 'Derby', region: 'England', lat: 52.9225, lng: -1.4746 },
+  { name: 'Plymouth', region: 'England', lat: 50.3755, lng: -4.1427 },
+  { name: 'Aberdeen', region: 'Scotland', lat: 57.1497, lng: -2.0943 },
+  { name: 'Swansea', region: 'Wales', lat: 51.6214, lng: -3.9436 },
+  { name: 'Belfast', region: 'N. Ireland', lat: 54.5973, lng: -5.9301 },
+  { name: 'Wolverhampton', region: 'England', lat: 52.5862, lng: -2.1270 },
+  { name: 'Reading', region: 'England', lat: 51.4543, lng: -0.9781 },
+  { name: 'Milton Keynes', region: 'England', lat: 52.0406, lng: -0.7594 },
+];
+
+function onSearchInput() {
+  const q = document.getElementById('city-search').value.trim();
+  if (!q) { closeAutocomplete(); return; }
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => fetchCitySuggestions(q), 180);
+}
+function onSearchFocus() {
+  const q = document.getElementById('city-search').value.trim();
+  if (q) fetchCitySuggestions(q);
+}
+function fetchCitySuggestions(q) {
+  const lower = q.toLowerCase();
+  const local = UK_CITIES.filter(c => c.name.toLowerCase().startsWith(lower)).slice(0, 5);
+  if (local.length) { showAutocomplete(local); return; }
+  // Nominatim fallback for less common places
+  fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q+' UK')}&format=json&limit=5&addressdetails=1`, { headers: { 'Accept-Language': 'en' } })
+    .then(r => r.json())
+    .then(data => {
+      const items = data.map(r => ({
+        name: r.address?.city || r.address?.town || r.address?.village || r.name,
+        region: r.address?.state || r.address?.county || '',
+        lat: parseFloat(r.lat), lng: parseFloat(r.lon),
+      })).filter(r => r.name);
+      showAutocomplete(items.slice(0, 5));
+    }).catch(() => {});
+}
+function showAutocomplete(items) {
+  searchResults = items;
+  const dd = document.getElementById('autocomplete-dropdown');
+  if (!items.length) { dd.style.display = 'none'; return; }
+  dd.innerHTML = items.map((it, i) => `
+    <div class="autocomplete-item" data-idx="${i}" onmousedown="selectCity(${i})">
+      <span class="ai-icon">📍</span>
+      <div>
+        <div class="ai-name">${it.name}</div>
+        <div class="ai-region">${it.region}</div>
+      </div>
+    </div>`).join('');
+  dd.style.display = 'block';
+}
+function closeAutocomplete() {
+  document.getElementById('autocomplete-dropdown').style.display = 'none';
+}
+function selectCity(idx) {
+  const city = searchResults[idx];
+  document.getElementById('city-search').value = city.name;
+  document.getElementById('search-icon').style.display = 'none';
+  document.getElementById('search-clear').style.display = '';
+  closeAutocomplete();
+  searchedCity = city;
+  drawRadiusCircle(city.lat, city.lng, radiusMiles);
+  map.flyTo([city.lat, city.lng], 9, { duration: 1.4 });
+  document.getElementById('radius-row').style.display = 'flex';
+  document.getElementById('city-search').blur();
+}
+function clearSearch() {
+  document.getElementById('city-search').value = '';
+  document.getElementById('search-icon').style.display = '';
+  document.getElementById('search-clear').style.display = 'none';
+  document.getElementById('radius-row').style.display = 'none';
+  closeAutocomplete();
+  clearRadius();
+  searchedCity = null;
+}
+document.getElementById('city-search').addEventListener('blur', () => setTimeout(closeAutocomplete, 150));
+
+// ── Radius circle ─────────────────────────────────────────────────────────────
+function drawRadiusCircle(lat, lng, miles) {
+  const meters = miles * 1609.34;
+  if (radiusCircle) {
+    radiusCircle.setLatLng([lat, lng]).setRadius(meters);
+    updateRadiusHandle(lat, lng, miles);
+    return;
+  }
+  radiusCircle = L.circle([lat, lng], {
+    radius: meters,
+    color: '#1A56DB', fillColor: '#1A56DB', fillOpacity: .07,
+    weight: 2, dashArray: '8 5',
+  }).addTo(map);
+  updateRadiusHandle(lat, lng, miles);
+}
+function updateRadiusHandle(lat, lng, miles) {
+  const meters = miles * 1609.34;
+  // East edge of circle
+  const dLng = (meters / 111139) / Math.cos(lat * Math.PI / 180);
+  const handleLat = lat;
+  const handleLng = lng + dLng;
+
+  const handleIcon = L.divIcon({
+    className: '',
+    html: `<div style="background:#1A56DB;color:#fff;border:2px solid #fff;border-radius:20px;padding:3px 9px;font-size:.7rem;font-weight:800;box-shadow:0 2px 8px rgba(0,0,0,.3);white-space:nowrap;cursor:ew-resize">${miles} mi</div>`,
+    iconSize: [56, 26], iconAnchor: [0, 13],
+  });
+
+  if (radiusHandleMarker) {
+    radiusHandleMarker.setLatLng([handleLat, handleLng]);
+    radiusHandleMarker.setIcon(handleIcon);
+  } else {
+    radiusHandleMarker = L.marker([handleLat, handleLng], { icon: handleIcon, draggable: false })
+      .addTo(map)
+      .on('click', toggleRadiusPopup);
+  }
+}
+function clearRadius() {
+  if (radiusCircle)      { map.removeLayer(radiusCircle);      radiusCircle = null; }
+  if (radiusHandleMarker){ map.removeLayer(radiusHandleMarker); radiusHandleMarker = null; }
+  document.getElementById('radius-popup').classList.remove('open');
+}
+function toggleRadiusPopup() {
+  document.getElementById('radius-popup').classList.toggle('open');
+}
+function onRadiusChange(val) {
+  radiusMiles = parseInt(val);
+  document.getElementById('radius-display').textContent = `${radiusMiles} mi`;
+  document.getElementById('radius-cur').textContent = `${radiusMiles} miles`;
+  if (searchedCity) drawRadiusCircle(searchedCity.lat, searchedCity.lng, radiusMiles);
+}
+// Close radius popup on map click
+map.on('click', () => document.getElementById('radius-popup').classList.remove('open'));
+
 // ── Sheet ─────────────────────────────────────────────────────────────────────
 function openDriverSheet(driver) {
   selectedItem = { type: 'driver', data: driver };
   clearRoute();
-
   const ini = (driver.name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
   const destHtml = driver.destination
-    ? `<div class="sheet-info-row">
-        <span class="sheet-info-icon">🗺️</span>
-        <div class="sheet-info-text">
-          Heading to <strong>${driver.destination.name}</strong>
-          <small>Route shown on map</small>
-        </div>
-       </div>`
+    ? `<div class="sheet-info-row"><span class="sheet-info-icon">🗺️</span><div class="sheet-info-text">Heading to <strong>${driver.destination.name}</strong><small>Route shown on map</small></div></div>`
     : '';
-
   const phoneHtml = driver.phone
-    ? `<div class="sheet-info-row">
-        <span class="sheet-info-icon">📞</span>
-        <div class="sheet-info-text">${driver.phone}</div>
-       </div>`
+    ? `<div class="sheet-info-row"><span class="sheet-info-icon">📞</span><div class="sheet-info-text">${driver.phone}</div></div>`
     : '';
-
   document.getElementById('sheet-content').innerHTML = `
     <div class="sheet-header">
       <div class="sheet-avatar driver">${ini}</div>
@@ -479,35 +875,22 @@ function openDriverSheet(driver) {
         <div class="sheet-subtitle"><span class="online-dot"></span> Online now</div>
       </div>
     </div>
-    ${destHtml}
-    ${phoneHtml}
+    ${destHtml}${phoneHtml}
     <div class="sheet-stats">
       <div class="sheet-stat"><div class="sheet-stat-val loading" id="stat-dist">…</div><div class="sheet-stat-lbl">Distance to you</div></div>
       <div class="sheet-stat"><div class="sheet-stat-val loading" id="stat-eta">…</div><div class="sheet-stat-lbl">Drive time</div></div>
     </div>
     <div class="sheet-actions">
-      ${driver.phone
-        ? `<a class="sheet-btn call" href="tel:${driver.phone}">
-            <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.11 1.18 2 2 0 012.11.01h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
-            Call Driver
-           </a>`
-        : ''}
-      <button class="sheet-btn primary" id="btn-show-route">
-        <svg viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
-        Show Route
-      </button>
-    </div>
-  `;
-
+      ${driver.phone ? `<a class="sheet-btn call" href="tel:${driver.phone}"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.11 1.18 2 2 0 012.11.01h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>Call Driver</a>` : ''}
+      <button class="sheet-btn primary" id="btn-show-route"><svg viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>Show Route</button>
+    </div>`;
   document.getElementById('btn-show-route').addEventListener('click', () => showRouteToDriver(driver));
   showSheet();
   if (myLat !== null) refreshDriverStats(driver.lat, driver.lng);
 }
-
 function openJobSheet(job) {
   selectedItem = { type: 'job', data: job };
   clearRoute();
-
   document.getElementById('sheet-content').innerHTML = `
     <div class="sheet-header">
       <div class="sheet-avatar job">📦</div>
@@ -516,55 +899,30 @@ function openJobSheet(job) {
         <div class="sheet-subtitle">Job Available</div>
       </div>
     </div>
-    <div class="sheet-info-row">
-      <span class="sheet-info-icon">📍</span>
-      <div class="sheet-info-text">
-        <strong>From:</strong> ${job.pickup.name || 'Unknown'}
-        <small><strong>To:</strong> ${job.dropoff.name || 'Unknown'}</small>
-      </div>
-    </div>
-    ${job.description
-      ? `<div class="sheet-info-row">
-          <span class="sheet-info-icon">📝</span>
-          <div class="sheet-info-text">${job.description}</div>
-         </div>`
-      : ''}
-    <div class="sheet-info-row">
-      <span class="sheet-info-icon">📞</span>
-      <div class="sheet-info-text">${job.phone}</div>
-    </div>
+    <div class="sheet-info-row"><span class="sheet-info-icon">📍</span><div class="sheet-info-text"><strong>From:</strong> ${job.pickup.name || 'Unknown'}<small><strong>To:</strong> ${job.dropoff.name || 'Unknown'}</small></div></div>
+    ${job.description ? `<div class="sheet-info-row"><span class="sheet-info-icon">📝</span><div class="sheet-info-text">${job.description}</div></div>` : ''}
+    <div class="sheet-info-row"><span class="sheet-info-icon">📞</span><div class="sheet-info-text">${job.phone || job.customerPhone || '—'}</div></div>
     <div class="sheet-actions">
-      <a class="sheet-btn call" href="tel:${job.phone}">
-        <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.11 1.18 2 2 0 012.11.01h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
-        Call Customer
-      </a>
-      <button class="sheet-btn amber" id="btn-show-job-route">
-        <svg viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
-        Show Route
-      </button>
-    </div>
-  `;
-
+      <a class="sheet-btn call" href="tel:${job.phone || job.customerPhone || ''}"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.11 1.18 2 2 0 012.11.01h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>Call Customer</a>
+      <button class="sheet-btn amber" id="btn-show-job-route"><svg viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>Show Route</button>
+    </div>`;
   document.getElementById('btn-show-job-route').addEventListener('click', () => showJobRoute(job));
   showSheet();
 }
-
 function showSheet() {
   document.getElementById('main-sheet').classList.add('open');
   document.getElementById('backdrop').classList.add('visible');
 }
-
 function closeSheet() {
   selectedItem = null;
   document.getElementById('main-sheet').classList.remove('open');
   document.getElementById('backdrop').classList.remove('visible');
 }
-
 document.getElementById('backdrop').addEventListener('click', closeSheet);
 
 // ── Route display ─────────────────────────────────────────────────────────────
 async function showRouteToDriver(driver) {
-  if (myLat === null) return;
+  if (myLat === null) { showToast('Enable location to see route'); return; }
   closeSheet();
   clearRoute();
   try {
@@ -579,29 +937,22 @@ async function showRouteToDriver(driver) {
     document.getElementById('route-bar').classList.add('visible');
   } catch (_) {}
 }
-
 function showJobRoute(job) {
-  closeSheet();
-  clearRoute();
-  const coords = [
-    [job.pickup.lat,  job.pickup.lng],
-    [job.dropoff.lat, job.dropoff.lng],
-  ];
+  closeSheet(); clearRoute();
+  const coords = [[job.pickup.lat, job.pickup.lng], [job.dropoff.lat, job.dropoff.lng]];
   activeRouteLine = L.polyline(coords, { color: '#F59E0B', weight: 4, opacity: .85, dashArray: '12 6' }).addTo(map);
   map.flyToBounds(L.latLngBounds(coords).pad(.25), { duration: 1.2 });
   document.getElementById('route-label').textContent = `${job.pickup.name || 'Pickup'} → ${job.dropoff.name || 'Dropoff'}`;
   document.getElementById('route-sub').textContent   = job.description || 'Job route';
   document.getElementById('route-bar').classList.add('visible');
 }
-
 document.getElementById('route-close').addEventListener('click', clearRoute);
-
 function clearRoute() {
   if (activeRouteLine) { map.removeLayer(activeRouteLine); activeRouteLine = null; }
   document.getElementById('route-bar').classList.remove('visible');
 }
 
-// Distance/ETA from user to driver
+// Distance/ETA stats
 async function refreshDriverStats(toLat, toLng) {
   const distEl = document.getElementById('stat-dist');
   const etaEl  = document.getElementById('stat-eta');
@@ -613,10 +964,7 @@ async function refreshDriverStats(toLat, toLng) {
     if (!res.ok) throw new Error();
     distEl.textContent = data.distance_label;
     etaEl.textContent  = data.eta_label;
-  } catch {
-    distEl.textContent = 'N/A';
-    etaEl.textContent  = '—';
-  }
+  } catch { distEl.textContent = 'N/A'; etaEl.textContent = '—'; }
 }
 
 // ── My location ───────────────────────────────────────────────────────────────
@@ -633,17 +981,15 @@ function setMyLocation(lat, lng, accuracy) {
     myMarker.setLatLng([lat, lng]);
     myCircle?.setLatLng([lat, lng]).setRadius(accuracy || 0);
   }
+  renderDrawerList();
 }
-
 function startWatchingLocation() {
   if (!navigator.geolocation) return;
   navigator.geolocation.watchPosition(
     ({ coords }) => setMyLocation(coords.latitude, coords.longitude, coords.accuracy),
-    null,
-    { enableHighAccuracy: true, maximumAge: 5000 },
+    null, { enableHighAccuracy: true, maximumAge: 5000 },
   );
 }
-
 document.getElementById('locate-btn').addEventListener('click', () => {
   if (myLat !== null) map.flyTo([myLat, myLng], 13, { duration: 1.2 });
   else startWatchingLocation();
@@ -655,69 +1001,36 @@ document.getElementById('post-job-btn').addEventListener('click', () => {
   document.getElementById('input-pickup').focus();
 });
 document.getElementById('modal-cancel').addEventListener('click', closeModal);
-
 function closeModal() {
   document.getElementById('post-modal').classList.remove('visible');
   document.getElementById('modal-error').classList.remove('visible');
 }
-
 document.getElementById('post-modal').addEventListener('click', (e) => {
   if (e.target === document.getElementById('post-modal')) closeModal();
 });
-
 async function geocodePlace(query) {
   try {
     const url  = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
     const res  = await fetch(url, { headers: { 'Accept-Language': 'en' } });
     const data = await res.json();
     if (!data.length) return null;
-    return {
-      name: data[0].display_name.split(',')[0].trim(),
-      lat:  parseFloat(data[0].lat),
-      lng:  parseFloat(data[0].lon),
-    };
+    return { name: data[0].display_name.split(',')[0].trim(), lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
   } catch (_) { return null; }
 }
-
 document.getElementById('modal-submit').addEventListener('click', async () => {
-  const pickupText = document.getElementById('input-pickup').value.trim();
-  const dropoffText= document.getElementById('input-dropoff').value.trim();
-  const desc       = document.getElementById('input-desc').value.trim();
-  const errEl      = document.getElementById('modal-error');
-  const btn        = document.getElementById('modal-submit');
-  const token      = localStorage.getItem('tx_token');
-
+  const pickupText  = document.getElementById('input-pickup').value.trim();
+  const dropoffText = document.getElementById('input-dropoff').value.trim();
+  const desc        = document.getElementById('input-desc').value.trim();
+  const errEl       = document.getElementById('modal-error');
+  const btn         = document.getElementById('modal-submit');
+  const token       = localStorage.getItem('tx_token');
   errEl.classList.remove('visible');
-
-  if (!pickupText || !dropoffText) {
-    errEl.textContent = 'Please fill in pickup and dropoff locations.';
-    errEl.classList.add('visible');
-    return;
-  }
-  if (!token) {
-    errEl.textContent = 'Please sign in first.';
-    errEl.classList.add('visible');
-    closeModal();
-    showAuthOverlay();
-    return;
-  }
-
-  btn.disabled = true;
-  btn.textContent = 'Looking up locations…';
-
+  if (!pickupText || !dropoffText) { errEl.textContent = 'Please fill in pickup and dropoff locations.'; errEl.classList.add('visible'); return; }
+  if (!token) { errEl.textContent = 'Please sign in first.'; errEl.classList.add('visible'); closeModal(); showAuthOverlay(); return; }
+  btn.disabled = true; btn.textContent = 'Looking up locations…';
   const [pickup, dropoff] = await Promise.all([geocodePlace(pickupText), geocodePlace(dropoffText)]);
-
-  if (!pickup) {
-    errEl.textContent = `Couldn't find "${pickupText}" — try a town or city name.`;
-    errEl.classList.add('visible');
-    btn.disabled = false; btn.textContent = 'Post Job'; return;
-  }
-  if (!dropoff) {
-    errEl.textContent = `Couldn't find "${dropoffText}" — try a town or city name.`;
-    errEl.classList.add('visible');
-    btn.disabled = false; btn.textContent = 'Post Job'; return;
-  }
-
+  if (!pickup) { errEl.textContent = `Couldn't find "${pickupText}" — try a town or city name.`; errEl.classList.add('visible'); btn.disabled = false; btn.textContent = 'Post Job'; return; }
+  if (!dropoff) { errEl.textContent = `Couldn't find "${dropoffText}" — try a town or city name.`; errEl.classList.add('visible'); btn.disabled = false; btn.textContent = 'Post Job'; return; }
   try {
     btn.textContent = 'Posting…';
     const res = await fetch('/api/jobs', {
@@ -726,20 +1039,26 @@ document.getElementById('modal-submit').addEventListener('click', async () => {
       body: JSON.stringify({ pickup, dropoff, description: desc }),
     });
     const data = await res.json();
-    if (!res.ok) {
-      if (res.status === 401) { signOut(); return; }
-      throw new Error(data.error || 'Post failed');
-    }
+    if (!res.ok) { if (res.status === 401) { signOut(); return; } throw new Error(data.error || 'Post failed'); }
     closeModal();
     ['input-pickup','input-dropoff','input-desc'].forEach(id => { document.getElementById(id).value = ''; });
     map.flyTo([pickup.lat, pickup.lng], 11, { duration: 1.5 });
+    showToast('✅ Job posted successfully');
   } catch (err) {
     errEl.textContent = err.message || 'Failed to post job — please try again.';
     errEl.classList.add('visible');
-  } finally {
-    btn.disabled = false; btn.textContent = 'Post Job';
-  }
+  } finally { btn.disabled = false; btn.textContent = 'Post Job'; }
 });
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+let toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function setSrv(s, t) {
@@ -756,15 +1075,12 @@ function fitDrivers(drivers) {
 // ── Auth ──────────────────────────────────────────────────────────────────────
 let authMode = 'login';
 let authRole = 'customer';
-
 function showAuthOverlay() {
   document.getElementById('auth-overlay').style.display = 'flex';
   setAuthMode('login');
   setTimeout(() => document.getElementById('auth-email').focus(), 100);
 }
-function hideAuthOverlay() {
-  document.getElementById('auth-overlay').style.display = 'none';
-}
+function hideAuthOverlay() { document.getElementById('auth-overlay').style.display = 'none'; }
 function setAuthMode(mode) {
   authMode = mode;
   document.getElementById('auth-tab-login').classList.toggle('active', mode === 'login');
@@ -790,7 +1106,6 @@ async function doAuth() {
   const btn      = document.getElementById('auth-submit-btn');
   errEl.classList.remove('visible');
   if (!email || !password) { errEl.textContent = 'Email and password are required.'; errEl.classList.add('visible'); return; }
-
   let body;
   if (authMode === 'register') {
     const name  = document.getElementById('auth-name').value.trim();
@@ -800,9 +1115,7 @@ async function doAuth() {
   } else {
     body = { email, password };
   }
-
-  btn.disabled = true;
-  btn.textContent = 'Please wait…';
+  btn.disabled = true; btn.textContent = 'Please wait…';
   try {
     const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
     const res  = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -821,9 +1134,8 @@ async function doAuth() {
   }
 }
 function showUserPill(user) {
-  const pill = document.getElementById('user-pill');
   document.getElementById('user-pill-name').textContent = user.name;
-  pill.style.display = '';
+  document.getElementById('user-pill').style.display = '';
 }
 function signOut() {
   localStorage.removeItem('tx_token');
@@ -834,8 +1146,8 @@ function signOut() {
 function checkAuth() {
   const token = localStorage.getItem('tx_token');
   const user  = JSON.parse(localStorage.getItem('tx_user') || 'null');
-  if (token && user) { showUserPill(user); }
-  else { showAuthOverlay(); }
+  if (token && user) showUserPill(user);
+  else showAuthOverlay();
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────

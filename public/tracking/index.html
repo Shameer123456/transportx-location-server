@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>TransportX — Driver Trail Viewer</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0c1220;--card:#141c2f;--card2:#1a2540;--border:#1f2d47;
+  --text:#e8edf7;--muted:#5a6a84;--text2:#a8b8d0;
+  --orange:#F97316;--green:#22C55E;--blue:#60A5FA;--red:#ef4444;
+  --shadow:0 4px 24px rgba(0,0,0,.5);
+}
+html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text)}
+#map{position:absolute;inset:0}
+[data-theme="light"] .leaflet-tile{filter:none}
+.leaflet-tile{filter:brightness(.75) saturate(.8)}
+
+/* ── Sidebar ── */
+#sidebar{
+  position:absolute;top:0;left:0;bottom:0;width:300px;z-index:500;
+  background:var(--card);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;box-shadow:4px 0 24px rgba(0,0,0,.4);
+}
+.sb-logo{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.sb-logo-mark{width:30px;height:30px;background:var(--orange);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sb-logo-mark svg{width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.sb-logo-text{font-size:15px;font-weight:800;color:var(--text)}
+.sb-logo-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.sb-body{flex:1;overflow-y:auto;padding:16px}
+.sb-body::-webkit-scrollbar{width:4px}
+.sb-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.sb-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px;margin-top:16px}
+.sb-label:first-child{margin-top:0}
+.sb-select,.sb-input{
+  width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;
+  padding:10px 12px;font-size:.85rem;color:var(--text);font-family:'Segoe UI',sans-serif;
+  outline:none;transition:border-color .15s;cursor:pointer;appearance:none;-webkit-appearance:none;
+}
+.sb-select:focus,.sb-input:focus{border-color:var(--orange)}
+.sb-select option{background:var(--card)}
+.load-btn{
+  width:100%;background:var(--orange);border:none;border-radius:12px;padding:13px;
+  font-size:.9rem;font-weight:800;color:#fff;cursor:pointer;margin-top:10px;
+  font-family:'Segoe UI',sans-serif;transition:all .15s;
+}
+.load-btn:hover{background:#e06010}
+.load-btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* Live badge */
+.live-row{display:flex;align-items:center;gap:8px;margin-top:10px}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0}
+.live-dot.pulse{animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
+.live-txt{font-size:.8rem;color:var(--muted)}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.stat-box{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+.stat-val{font-size:1.1rem;font-weight:800;color:var(--text)}
+.stat-lbl{font-size:.65rem;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.4px}
+
+/* Time legend */
+.legend{display:flex;align-items:center;gap:0;margin-top:6px;border-radius:6px;overflow:hidden;height:10px}
+.legend-bar{flex:1;height:100%}
+.legend-labels{display:flex;justify-content:space-between;margin-top:4px;font-size:.65rem;color:var(--muted)}
+
+/* Timeline / stops */
+.timeline{display:flex;flex-direction:column;gap:0;margin-top:6px}
+.tl-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;border-radius:6px;padding:6px 8px}
+.tl-item:hover{background:var(--card2)}
+.tl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.tl-info{flex:1;min-width:0}
+.tl-time{font-size:.78rem;font-weight:700;color:var(--text)}
+.tl-coords{font-size:.65rem;color:var(--muted);margin-top:2px}
+.tl-speed{font-size:.65rem;color:var(--blue);margin-top:1px}
+
+.empty-state{text-align:center;padding:32px 16px;color:var(--muted);font-size:.85rem;line-height:1.7}
+.empty-icon{font-size:2.4rem;margin-bottom:10px}
+.error-msg{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:10px 12px;font-size:.8rem;color:var(--red);margin-top:8px;display:none}
+.error-msg.show{display:block}
+
+/* ── Map overlays ── */
+.map-controls{position:absolute;top:14px;right:14px;z-index:400;display:flex;flex-direction:column;gap:8px}
+.mc-btn{width:40px;height:40px;background:var(--card);border:none;border-radius:12px;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1rem;transition:all .15s}
+.mc-btn:hover{transform:scale(1.05)}
+
+.map-badge{position:absolute;top:14px;left:314px;z-index:400;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 16px;box-shadow:var(--shadow);display:none}
+.mb-title{font-size:.75rem;font-weight:800;color:var(--text)}
+.mb-sub{font-size:.65rem;color:var(--muted);margin-top:2px}
+
+.time-tooltip{position:absolute;z-index:600;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:8px 12px;box-shadow:var(--shadow);pointer-events:none;display:none;font-size:.8rem}
+.tt-time{font-weight:800;color:var(--text)}
+.tt-speed{color:var(--blue);margin-top:2px}
+.tt-coords{color:var(--muted);font-size:.7rem;margin-top:2px}
+
+/* Leaflet overrides */
+.leaflet-control-zoom{border:none!important;box-shadow:var(--shadow)!important}
+.leaflet-control-zoom a{background:var(--card)!important;color:var(--text)!important;border:none!important;border-bottom:1px solid var(--border)!important;width:36px!important;height:36px!important;line-height:36px!important}
+.leaflet-control-zoom a:hover{color:var(--orange)!important}
+.leaflet-bar{border-radius:12px!important;overflow:hidden}
+.leaflet-control-attribution{background:rgba(20,28,47,.7)!important;color:#5a6a84!important;font-size:.6rem!important;border-radius:8px 0 0 0!important}
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div id="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-mark">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    </div>
+    <div>
+      <div class="sb-logo-text">TrailViewer</div>
+      <div class="sb-logo-sub">TransportX · Driver tracking</div>
+    </div>
+  </div>
+
+  <div class="sb-body">
+
+    <div class="sb-label">Driver</div>
+    <select class="sb-select" id="driver-select">
+      <option value="">Loading drivers…</option>
+    </select>
+
+    <div class="sb-label">Date</div>
+    <input type="date" class="sb-input" id="date-input"/>
+
+    <button class="load-btn" id="load-btn" onclick="loadTrail()">Load Trail</button>
+    <div class="error-msg" id="error-msg"></div>
+
+    <div class="live-row" id="live-row" style="display:none">
+      <div class="live-dot pulse" id="live-dot"></div>
+      <div class="live-txt" id="live-txt">Connecting to live updates…</div>
+    </div>
+
+    <div id="stats-section" style="display:none">
+      <div class="sb-label">Session stats</div>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-val" id="stat-dist">—</div>
+          <div class="stat-lbl">Distance</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="stat-pings">—</div>
+          <div class="stat-lbl">GPS pings</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="stat-start">—</div>
+          <div class="stat-lbl">First ping</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="stat-end">—</div>
+          <div class="stat-lbl">Last ping</div>
+        </div>
+      </div>
+
+      <div class="sb-label" style="margin-top:14px">Time of day</div>
+      <div class="legend" id="legend"></div>
+      <div class="legend-labels">
+        <span>Midnight</span><span>Noon</span><span>Midnight</span>
+      </div>
+
+      <div class="sb-label" style="margin-top:14px">Route milestones</div>
+      <div class="timeline" id="timeline"></div>
+    </div>
+
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon">🗺️</div>
+      Select a driver and date,<br>then hit <strong>Load Trail</strong>
+    </div>
+
+  </div>
+</div>
+
+<!-- Map controls -->
+<div class="map-controls">
+  <button class="mc-btn" onclick="fitTrail()" title="Fit trail">⛶</button>
+  <button class="mc-btn" onclick="toggleLiveFollow()" id="follow-btn" title="Follow live">📡</button>
+</div>
+
+<!-- Map badge (current driver info) -->
+<div class="map-badge" id="map-badge">
+  <div class="mb-title" id="mb-title">—</div>
+  <div class="mb-sub" id="mb-sub">—</div>
+</div>
+
+<!-- Time tooltip -->
+<div class="time-tooltip" id="time-tooltip">
+  <div class="tt-time" id="tt-time">—</div>
+  <div class="tt-speed" id="tt-speed"></div>
+  <div class="tt-coords" id="tt-coords"></div>
+</div>
+
+<!-- Map -->
+<div id="map" style="left:300px"></div>
+
+<script>
+// ── Map ──────────────────────────────────────────────────────────────────────
+const map = L.map('map', { zoomControl: false }).setView([54.5, -3.2], 6);
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_matter/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap © CARTO', maxZoom: 19, subdomains: 'abcd',
+}).addTo(map);
+
+// ── State ────────────────────────────────────────────────────────────────────
+let trailPoints       = [];   // all loaded points for the day
+let trailPolyline     = null; // main polyline
+let trailDotMarkers   = [];   // hourly time markers on the trail
+let liveMarker        = null; // real-time moving dot
+let livePolyline      = null; // polyline that grows live
+let livePoints        = [];   // points added since page load
+let currentDriverId   = null;
+let currentDate       = null;
+let liveFollow        = false;
+
+// ── Colour helpers ────────────────────────────────────────────────────────────
+// Maps a time-of-day fraction (0=midnight, .5=noon, 1=midnight) to a colour.
+function timeColor(fraction) {
+  // Palette: 00:00 deep blue → 06:00 purple → 12:00 orange → 18:00 amber → 24:00 deep blue
+  const stops = [
+    { f: 0.00, r:  30, g:  50, b: 120 },
+    { f: 0.25, r: 140, g:  60, b: 200 },
+    { f: 0.50, r: 249, g: 115, b:  22 },
+    { f: 0.75, r: 250, g: 200, b:  20 },
+    { f: 1.00, r:  30, g:  50, b: 120 },
+  ];
+  for (let i = 0; i < stops.length - 1; i++) {
+    const a = stops[i], b = stops[i+1];
+    if (fraction >= a.f && fraction <= b.f) {
+      const t = (fraction - a.f) / (b.f - a.f);
+      const lerp = (x, y) => Math.round(x + (y - x) * t);
+      return `rgb(${lerp(a.r,b.r)},${lerp(a.g,b.g)},${lerp(a.b,b.b)})`;
+    }
+  }
+  return '#F97316';
+}
+function pointFraction(ts) {
+  const d = new Date(ts);
+  return (d.getUTCHours() * 3600 + d.getUTCMinutes() * 60 + d.getUTCSeconds()) / 86400;
+}
+
+// ── Load drivers list ─────────────────────────────────────────────────────────
+async function loadDriversList() {
+  try {
+    const list = await fetch('/api/trail/drivers?days=30').then(r => r.json());
+    const sel  = document.getElementById('driver-select');
+    if (!list.length) {
+      sel.innerHTML = '<option value="">No driver history yet</option>';
+      return;
+    }
+    sel.innerHTML = '<option value="">— choose driver —</option>' +
+      list.map(d => `<option value="${d.driverId}">${d.name || d.driverId} (${d.totalPings} pings)</option>`).join('');
+    sel.addEventListener('change', onDriverChange);
+  } catch (_) {
+    document.getElementById('driver-select').innerHTML = '<option value="">Could not load — server offline?</option>';
+  }
+}
+
+// When driver changes, load which dates have data
+async function onDriverChange() {
+  const driverId = document.getElementById('driver-select').value;
+  if (!driverId) return;
+  try {
+    const dates = await fetch(`/api/drivers/${driverId}/days`).then(r => r.json());
+    const input = document.getElementById('date-input');
+    if (dates.length) {
+      input.value = dates[0]; // most recent
+    }
+  } catch (_) {}
+}
+
+// ── Load trail ────────────────────────────────────────────────────────────────
+async function loadTrail() {
+  const driverId = document.getElementById('driver-select').value;
+  const date     = document.getElementById('date-input').value;
+  const errEl    = document.getElementById('error-msg');
+  const btn      = document.getElementById('load-btn');
+
+  errEl.classList.remove('show');
+  if (!driverId) { showErr('Please select a driver.'); return; }
+  if (!date)     { showErr('Please select a date.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Loading…';
+
+  try {
+    const data = await fetch(`/api/drivers/${encodeURIComponent(driverId)}/trail?date=${date}`).then(r => r.json());
+    currentDriverId = driverId;
+    currentDate     = date;
+    renderTrail(data.points, driverId, date);
+    setupLive(driverId, date);
+  } catch (err) {
+    showErr('Could not load trail. Is the server running?');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Load Trail';
+  }
+}
+
+function showErr(msg) {
+  const el = document.getElementById('error-msg');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+// ── Render trail ──────────────────────────────────────────────────────────────
+function renderTrail(points, driverId, date) {
+  // Clear old layers
+  clearTrailLayers();
+  trailPoints = points;
+  livePoints  = [...points]; // live will continue from here
+
+  document.getElementById('empty-state').style.display = 'none';
+
+  if (!points.length) {
+    document.getElementById('stats-section').style.display = 'none';
+    document.getElementById('empty-state').style.display = '';
+    document.getElementById('empty-state').innerHTML = `<div class="empty-icon">📭</div>No GPS pings recorded for<br><strong>${driverId}</strong> on <strong>${date}</strong>`;
+    return;
+  }
+
+  // Build colour-coded polyline segments
+  const latLngs = points.map(p => [p.lat, p.lng]);
+
+  // Draw each segment with its own colour
+  for (let i = 0; i < points.length - 1; i++) {
+    const frac  = pointFraction(points[i].timestamp);
+    const color = timeColor(frac);
+    L.polyline([[points[i].lat, points[i].lng], [points[i+1].lat, points[i+1].lng]], {
+      color, weight: 4, opacity: .9, lineJoin: 'round', lineCap: 'round',
+    }).addTo(map);
+  }
+
+  // Start dot
+  const startDot = L.circleMarker([points[0].lat, points[0].lng], {
+    radius: 7, color: '#fff', weight: 2, fillColor: '#22C55E', fillOpacity: 1,
+  }).addTo(map).bindTooltip(`▶ Start · ${fmt(points[0].timestamp)}`, { permanent: false });
+
+  // End dot
+  const endPt = points[points.length - 1];
+  const endDot = L.circleMarker([endPt.lat, endPt.lng], {
+    radius: 7, color: '#fff', weight: 2, fillColor: '#ef4444', fillOpacity: 1,
+  }).addTo(map).bindTooltip(`⏹ Last ping · ${fmt(endPt.timestamp)}`, { permanent: false });
+
+  // Hourly markers along the trail
+  addHourlyMarkers(points);
+
+  // Interactive invisible hit-targets on every point
+  points.forEach((p, i) => {
+    if (i % 3 !== 0) return; // every 3rd point to avoid overload
+    const m = L.circleMarker([p.lat, p.lng], {
+      radius: 5, color: 'transparent', weight: 0, fillColor: 'transparent', fillOpacity: 0,
+    }).addTo(map);
+    m.on('mouseover', (e) => showTooltip(e.originalEvent, p));
+    m.on('mouseout', hideTooltip);
+    m.on('click', () => map.flyTo([p.lat, p.lng], 15, { duration: .8 }));
+    trailDotMarkers.push(m);
+  });
+
+  // Fit map
+  map.flyToBounds(L.latLngBounds(latLngs).pad(.15), { duration: 1.2 });
+
+  // Stats
+  updateStats(points, driverId);
+
+  // Map badge
+  const driverName = document.getElementById('driver-select').selectedOptions[0]?.text.split(' (')[0] || driverId;
+  showBadge(driverName, date);
+}
+
+function addHourlyMarkers(points) {
+  if (!points.length) return;
+  let lastHour = -1;
+  points.forEach(p => {
+    const d = new Date(p.timestamp);
+    const h = d.getUTCHours();
+    if (h !== lastHour) {
+      lastHour = h;
+      const label = `${String(h).padStart(2,'0')}:00`;
+      const frac  = pointFraction(p.timestamp);
+      const color = timeColor(frac);
+      const icon  = L.divIcon({
+        className: '',
+        html: `<div style="background:${color};color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:20px;border:1.5px solid rgba(255,255,255,.3);white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.4)">${label}</div>`,
+        iconAnchor: [20, 10],
+      });
+      const m = L.marker([p.lat, p.lng], { icon, interactive: false }).addTo(map);
+      trailDotMarkers.push(m);
+    }
+  });
+}
+
+function updateStats(points, driverId) {
+  document.getElementById('stats-section').style.display = '';
+
+  // Distance (haversine sum)
+  let totalM = 0;
+  for (let i = 1; i < points.length; i++) {
+    totalM += haversine(points[i-1].lat, points[i-1].lng, points[i].lat, points[i].lng);
+  }
+  const totalKm = (totalM / 1000).toFixed(1);
+  const totalMi = (totalM / 1609.34).toFixed(1);
+
+  document.getElementById('stat-dist').textContent  = `${totalMi} mi`;
+  document.getElementById('stat-pings').textContent = points.length;
+  document.getElementById('stat-start').textContent = fmtShort(points[0].timestamp);
+  document.getElementById('stat-end').textContent   = fmtShort(points[points.length-1].timestamp);
+
+  // Time legend bar
+  buildLegendBar();
+
+  // Timeline — milestone every ~30 mins or significant gap
+  buildTimeline(points);
+}
+
+function buildLegendBar() {
+  const bar = document.getElementById('legend');
+  const n   = 100;
+  bar.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const d = document.createElement('div');
+    d.className = 'legend-bar';
+    d.style.background = timeColor(i / n);
+    bar.appendChild(d);
+  }
+}
+
+function buildTimeline(points) {
+  const tl = document.getElementById('timeline');
+  tl.innerHTML = '';
+  // Pick one point per hour
+  const seen = new Set();
+  const picks = points.filter(p => {
+    const h = new Date(p.timestamp).getUTCHours();
+    if (seen.has(h)) return false;
+    seen.add(h); return true;
+  });
+  picks.forEach(p => {
+    const frac  = pointFraction(p.timestamp);
+    const color = timeColor(frac);
+    const spd   = p.speed != null ? `${(p.speed * 2.237).toFixed(0)} mph` : '';
+    const el = document.createElement('div');
+    el.className = 'tl-item';
+    el.innerHTML = `
+      <div class="tl-dot" style="background:${color}"></div>
+      <div class="tl-info">
+        <div class="tl-time">${fmt(p.timestamp)}</div>
+        <div class="tl-coords">${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}</div>
+        ${spd ? `<div class="tl-speed">${spd}</div>` : ''}
+      </div>`;
+    el.onclick = () => map.flyTo([p.lat, p.lng], 14, { duration: .8 });
+    tl.appendChild(el);
+  });
+}
+
+function clearTrailLayers() {
+  map.eachLayer(l => {
+    if (l instanceof L.Polyline || l instanceof L.CircleMarker || l instanceof L.Marker) {
+      if (l !== liveMarker && l !== livePolyline) map.removeLayer(l);
+    }
+  });
+  trailDotMarkers = [];
+  if (liveMarker)   { map.removeLayer(liveMarker);   liveMarker   = null; }
+  if (livePolyline) { map.removeLayer(livePolyline); livePolyline = null; }
+}
+
+// ── Live updates via Socket.IO ────────────────────────────────────────────────
+let socket = null;
+function setupLive(driverId, date) {
+  const todayUTC = new Date().toISOString().slice(0, 10);
+  const isToday  = date === todayUTC;
+
+  document.getElementById('live-row').style.display = isToday ? 'flex' : 'none';
+  if (!isToday) return;  // Only listen live for today
+
+  if (socket) { socket.disconnect(); socket = null; }
+
+  socket = io({ path: '/socket.io' });
+  socket.on('connect', () => {
+    document.getElementById('live-dot').classList.add('pulse');
+    document.getElementById('live-txt').textContent = 'Live — updates as driver moves';
+    socket.emit('customer:join');
+  });
+  socket.on('disconnect', () => {
+    document.getElementById('live-dot').classList.remove('pulse');
+    document.getElementById('live-txt').textContent = 'Reconnecting…';
+  });
+
+  socket.on('driver:location', (data) => {
+    if (data.driverId !== driverId) return;
+    const pt = { lat: data.lat, lng: data.lng, heading: data.heading, speed: data.speed, timestamp: new Date().toISOString() };
+    livePoints.push(pt);
+    extendLiveTrail(pt);
+    if (liveFollow) map.panTo([data.lat, data.lng], { animate: true });
+  });
+}
+
+function extendLiveTrail(pt) {
+  const frac  = pointFraction(pt.timestamp);
+  const color = timeColor(frac);
+
+  // Update live marker
+  if (!liveMarker) {
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="width:14px;height:14px;border-radius:50%;background:#22C55E;border:3px solid #fff;box-shadow:0 0 0 6px rgba(34,197,94,.25),0 2px 8px rgba(0,0,0,.4)"></div>`,
+      iconSize: [14, 14], iconAnchor: [7, 7],
+    });
+    liveMarker = L.marker([pt.lat, pt.lng], { icon, zIndexOffset: 1000 }).addTo(map);
+  } else {
+    liveMarker.setLatLng([pt.lat, pt.lng]);
+  }
+
+  // Extend coloured polyline
+  if (livePoints.length >= 2) {
+    const prev = livePoints[livePoints.length - 2];
+    L.polyline([[prev.lat, prev.lng], [pt.lat, pt.lng]], {
+      color, weight: 4, opacity: .9,
+    }).addTo(map);
+  }
+
+  // Update last-ping stat
+  document.getElementById('stat-end').textContent   = fmtShort(pt.timestamp);
+  document.getElementById('stat-pings').textContent = livePoints.length;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function fitTrail() {
+  const pts = livePoints.length ? livePoints : trailPoints;
+  if (!pts.length) return;
+  map.flyToBounds(L.latLngBounds(pts.map(p => [p.lat, p.lng])).pad(.15), { duration: 1.2 });
+}
+function toggleLiveFollow() {
+  liveFollow = !liveFollow;
+  document.getElementById('follow-btn').style.background = liveFollow ? 'rgba(34,197,94,.25)' : '';
+  document.getElementById('follow-btn').title = liveFollow ? 'Stop following' : 'Follow live';
+}
+function showBadge(name, date) {
+  document.getElementById('map-badge').style.display = '';
+  document.getElementById('mb-title').textContent = name;
+  document.getElementById('mb-sub').textContent   = date;
+}
+
+// Tooltip
+const tooltip = document.getElementById('time-tooltip');
+function showTooltip(e, p) {
+  tooltip.style.display = 'block';
+  document.getElementById('tt-time').textContent   = fmt(p.timestamp);
+  document.getElementById('tt-speed').textContent  = p.speed != null ? `${(p.speed * 2.237).toFixed(0)} mph` : '';
+  document.getElementById('tt-coords').textContent = `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`;
+  const x = e.clientX - 308;
+  const y = e.clientY - 10;
+  tooltip.style.left = x + 'px';
+  tooltip.style.top  = y + 'px';
+}
+function hideTooltip() { tooltip.style.display = 'none'; }
+
+function fmt(ts) {
+  const d = new Date(ts);
+  return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'UTC' }) + ' UTC';
+}
+function fmtShort(ts) {
+  return new Date(ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
+}
+
+function haversine(lat1, lng1, lat2, lng2) {
+  const R  = 6371000;
+  const dL = (lat2 - lat1) * Math.PI / 180;
+  const dG = (lng2 - lng1) * Math.PI / 180;
+  const a  = Math.sin(dL/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dG/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+// Default date = today UTC
+document.getElementById('date-input').value = new Date().toISOString().slice(0, 10);
+loadDriversList();
+</script>
+</body>
+</html>

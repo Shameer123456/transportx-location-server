@@ -17,7 +17,6 @@
 }
 html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text)}
 #map{position:absolute;inset:0}
-[data-theme="light"] .leaflet-tile{filter:none}
 .leaflet-tile{filter:brightness(.75) saturate(.8)}
 
 /* ── Sidebar ── */
@@ -51,6 +50,24 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
 .load-btn:hover{background:#e06010}
 .load-btn:disabled{opacity:.5;cursor:not-allowed}
 
+/* Road-snap toggle */
+.snap-row{display:flex;align-items:center;justify-content:space-between;margin-top:10px;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:9px 12px}
+.snap-label{font-size:.8rem;color:var(--text2)}
+.snap-toggle{position:relative;width:36px;height:20px;flex-shrink:0}
+.snap-toggle input{opacity:0;width:0;height:0;position:absolute}
+.snap-slider{position:absolute;inset:0;background:#2d3748;border-radius:20px;cursor:pointer;transition:.2s}
+.snap-slider::before{content:'';position:absolute;width:14px;height:14px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+.snap-toggle input:checked + .snap-slider{background:var(--orange)}
+.snap-toggle input:checked + .snap-slider::before{transform:translateX(16px)}
+
+/* Snap progress */
+.snap-progress{background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.25);border-radius:8px;padding:10px 12px;margin-top:8px;display:none}
+.snap-progress.show{display:block}
+.snap-prog-title{font-size:.78rem;font-weight:700;color:var(--orange);margin-bottom:6px}
+.snap-prog-bar-wrap{background:rgba(249,115,22,.15);border-radius:4px;height:4px;overflow:hidden}
+.snap-prog-bar{height:100%;background:var(--orange);border-radius:4px;transition:width .3s;width:0%}
+.snap-prog-txt{font-size:.7rem;color:var(--muted);margin-top:5px}
+
 /* Live badge */
 .live-row{display:flex;align-items:center;gap:8px;margin-top:10px}
 .live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0}
@@ -64,6 +81,9 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
 .stat-val{font-size:1.1rem;font-weight:800;color:var(--text)}
 .stat-lbl{font-size:.65rem;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.4px}
 
+/* Road-snap badge on stat */
+.road-badge{display:inline-block;font-size:.55rem;font-weight:800;background:rgba(249,115,22,.18);color:var(--orange);border-radius:4px;padding:1px 5px;margin-left:4px;vertical-align:middle;letter-spacing:.3px}
+
 /* Time legend */
 .legend{display:flex;align-items:center;gap:0;margin-top:6px;border-radius:6px;overflow:hidden;height:10px}
 .legend-bar{flex:1;height:100%}
@@ -71,7 +91,7 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
 
 /* Timeline / stops */
 .timeline{display:flex;flex-direction:column;gap:0;margin-top:6px}
-.tl-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;border-radius:6px;padding:6px 8px}
+.tl-item{display:flex;align-items:flex-start;gap:10px;cursor:pointer;transition:background .1s;border-radius:6px;padding:6px 8px;border-bottom:1px solid var(--border)}
 .tl-item:hover{background:var(--card2)}
 .tl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:3px}
 .tl-info{flex:1;min-width:0}
@@ -130,8 +150,24 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
     <div class="sb-label">Date</div>
     <input type="date" class="sb-input" id="date-input"/>
 
+    <!-- Road-snap toggle -->
+    <div class="snap-row">
+      <span class="snap-label">🛣️ Snap to roads (OSRM)</span>
+      <label class="snap-toggle">
+        <input type="checkbox" id="snap-toggle" checked/>
+        <span class="snap-slider"></span>
+      </label>
+    </div>
+
     <button class="load-btn" id="load-btn" onclick="loadTrail()">Load Trail</button>
     <div class="error-msg" id="error-msg"></div>
+
+    <!-- Road-snap progress -->
+    <div class="snap-progress" id="snap-progress">
+      <div class="snap-prog-title">🛣️ Snapping to roads…</div>
+      <div class="snap-prog-bar-wrap"><div class="snap-prog-bar" id="snap-prog-bar"></div></div>
+      <div class="snap-prog-txt" id="snap-prog-txt">Calling OSRM routing engine…</div>
+    </div>
 
     <div class="live-row" id="live-row" style="display:none">
       <div class="live-dot pulse" id="live-dot"></div>
@@ -183,7 +219,7 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
   <button class="mc-btn" onclick="toggleLiveFollow()" id="follow-btn" title="Follow live">📡</button>
 </div>
 
-<!-- Map badge (current driver info) -->
+<!-- Map badge -->
 <div class="map-badge" id="map-badge">
   <div class="mb-title" id="mb-title">—</div>
   <div class="mb-sub" id="mb-sub">—</div>
@@ -208,20 +244,16 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_matter/{z}/{x}/{y}{r}.png', 
 }).addTo(map);
 
 // ── State ────────────────────────────────────────────────────────────────────
-let trailPoints       = [];   // all loaded points for the day
-let trailPolyline     = null; // main polyline
-let trailDotMarkers   = [];   // hourly time markers on the trail
-let liveMarker        = null; // real-time moving dot
-let livePolyline      = null; // polyline that grows live
-let livePoints        = [];   // points added since page load
-let currentDriverId   = null;
-let currentDate       = null;
-let liveFollow        = false;
+let trailPoints     = [];
+let trailLayers     = [];   // all map layers for the current trail
+let liveMarker      = null;
+let livePoints      = [];
+let currentDriverId = null;
+let currentDate     = null;
+let liveFollow      = false;
 
 // ── Colour helpers ────────────────────────────────────────────────────────────
-// Maps a time-of-day fraction (0=midnight, .5=noon, 1=midnight) to a colour.
 function timeColor(fraction) {
-  // Palette: 00:00 deep blue → 06:00 purple → 12:00 orange → 18:00 amber → 24:00 deep blue
   const stops = [
     { f: 0.00, r:  30, g:  50, b: 120 },
     { f: 0.25, r: 140, g:  60, b: 200 },
@@ -244,6 +276,83 @@ function pointFraction(ts) {
   return (d.getUTCHours() * 3600 + d.getUTCMinutes() * 60 + d.getUTCSeconds()) / 86400;
 }
 
+// ── OSRM Road Snapping ────────────────────────────────────────────────────────
+// Sends GPS points to OSRM's map-matching endpoint in batches of 80.
+// Returns a denser array of {lat, lng, timestamp} points snapped to actual roads.
+// Falls back gracefully to straight lines on any failure.
+async function snapToRoads(points, onProgress) {
+  if (points.length < 2) return points;
+
+  const BATCH = 80;   // OSRM hard limit ~100; use 80 for safety
+  const DELAY = 350;  // ms between requests — be polite to the public server
+
+  // Stride down to max 600 input points to stay within rate limits
+  let working = points;
+  if (points.length > 600) {
+    const stride = Math.ceil(points.length / 600);
+    working = points.filter((_, i) => i % stride === 0 || i === points.length - 1);
+  }
+
+  const totalBatches = Math.ceil((working.length - 1) / (BATCH - 1)) || 1;
+  let batchsDone     = 0;
+  const results      = [];
+  let batchStart     = 0;
+
+  while (batchStart < working.length - 1) {
+    const batchEnd = Math.min(batchStart + BATCH, working.length);
+    const batch    = working.slice(batchStart, batchEnd);
+
+    let batchOk = false;
+    try {
+      const coords = batch.map(p => `${p.lng.toFixed(6)},${p.lat.toFixed(6)}`).join(';');
+      const ts     = batch.map(p => Math.floor(new Date(p.timestamp).getTime() / 1000)).join(';');
+      const url    = `https://router.project-osrm.org/match/v1/driving/${coords}` +
+                     `?timestamps=${ts}&overview=full&geometries=geojson&gaps=ignore&tidy=false`;
+
+      const res  = await fetch(url, { signal: AbortSignal.timeout(12000) });
+      const data = await res.json();
+
+      if (data.code === 'Ok' && data.matchings?.length) {
+        const tStart  = new Date(batch[0].timestamp).getTime();
+        const tEnd    = new Date(batch[batch.length - 1].timestamp).getTime();
+        const tRange  = tEnd - tStart || 1;
+
+        // Collect all road coordinates across all matchings for this batch
+        let allCoords = [];
+        for (const m of data.matchings) allCoords = allCoords.concat(m.geometry.coordinates);
+
+        // If not the first batch, skip the first coord (it's a duplicate of the last result)
+        const startIdx = results.length > 0 ? 1 : 0;
+        for (let i = startIdx; i < allCoords.length; i++) {
+          const frac = i / (allCoords.length - 1 || 1);
+          const t    = tStart + tRange * frac;
+          results.push({ lat: allCoords[i][1], lng: allCoords[i][0], timestamp: new Date(t).toISOString() });
+        }
+        batchOk = true;
+      }
+    } catch (e) {
+      console.warn('OSRM batch failed:', e.message);
+    }
+
+    if (!batchOk) {
+      // Fall back to raw GPS points for this batch
+      const startIdx = results.length > 0 ? 1 : 0;
+      for (let i = startIdx; i < batch.length; i++) {
+        results.push({ lat: batch[i].lat, lng: batch[i].lng, timestamp: batch[i].timestamp });
+      }
+    }
+
+    batchsDone++;
+    if (onProgress) onProgress(batchsDone / totalBatches, batchsDone, totalBatches);
+
+    if (batchEnd >= working.length) break;
+    batchStart = batchEnd - 1;            // overlap by 1 to stitch batches
+    await new Promise(r => setTimeout(r, DELAY));
+  }
+
+  return results;
+}
+
 // ── Load drivers list ─────────────────────────────────────────────────────────
 async function loadDriversList() {
   try {
@@ -261,43 +370,60 @@ async function loadDriversList() {
   }
 }
 
-// When driver changes, load which dates have data
 async function onDriverChange() {
   const driverId = document.getElementById('driver-select').value;
   if (!driverId) return;
   try {
     const dates = await fetch(`/api/drivers/${driverId}/days`).then(r => r.json());
-    const input = document.getElementById('date-input');
-    if (dates.length) {
-      input.value = dates[0]; // most recent
-    }
+    if (dates.length) document.getElementById('date-input').value = dates[0];
   } catch (_) {}
 }
 
 // ── Load trail ────────────────────────────────────────────────────────────────
 async function loadTrail() {
-  const driverId = document.getElementById('driver-select').value;
-  const date     = document.getElementById('date-input').value;
-  const errEl    = document.getElementById('error-msg');
-  const btn      = document.getElementById('load-btn');
+  const driverId   = document.getElementById('driver-select').value;
+  const date       = document.getElementById('date-input').value;
+  const snapEnabled = document.getElementById('snap-toggle').checked;
+  const errEl      = document.getElementById('error-msg');
+  const btn        = document.getElementById('load-btn');
 
   errEl.classList.remove('show');
   if (!driverId) { showErr('Please select a driver.'); return; }
   if (!date)     { showErr('Please select a date.'); return; }
 
-  btn.disabled = true;
+  btn.disabled    = true;
   btn.textContent = 'Loading…';
 
   try {
     const data = await fetch(`/api/drivers/${encodeURIComponent(driverId)}/trail?date=${date}`).then(r => r.json());
     currentDriverId = driverId;
     currentDate     = date;
-    renderTrail(data.points, driverId, date);
+
+    let renderPoints = data.points;
+    let snapped      = false;
+
+    if (snapEnabled && data.points.length >= 2) {
+      // Show progress UI
+      const progEl  = document.getElementById('snap-progress');
+      const barEl   = document.getElementById('snap-prog-bar');
+      const txtEl   = document.getElementById('snap-prog-txt');
+      progEl.classList.add('show');
+      btn.textContent = 'Snapping…';
+
+      renderPoints = await snapToRoads(data.points, (pct, done, total) => {
+        barEl.style.width = `${Math.round(pct * 100)}%`;
+        txtEl.textContent = `Batch ${done}/${total} — ${Math.round(pct * 100)}%`;
+      });
+      progEl.classList.remove('show');
+      snapped = true;
+    }
+
+    renderTrail(renderPoints, data.points, driverId, date, snapped);
     setupLive(driverId, date);
   } catch (err) {
     showErr('Could not load trail. Is the server running?');
   } finally {
-    btn.disabled = false;
+    btn.disabled    = false;
     btn.textContent = 'Load Trail';
   }
 }
@@ -309,123 +435,119 @@ function showErr(msg) {
 }
 
 // ── Render trail ──────────────────────────────────────────────────────────────
-function renderTrail(points, driverId, date) {
-  // Clear old layers
+// renderPoints = road-snapped (or raw) points to actually draw on map
+// rawPoints    = original GPS pings (used for stats like distance/count)
+function renderTrail(renderPoints, rawPoints, driverId, date, snapped) {
   clearTrailLayers();
-  trailPoints = points;
-  livePoints  = [...points]; // live will continue from here
+  trailPoints = rawPoints;
+  livePoints  = [...rawPoints];
 
   document.getElementById('empty-state').style.display = 'none';
 
-  if (!points.length) {
+  if (!rawPoints.length) {
     document.getElementById('stats-section').style.display = 'none';
-    document.getElementById('empty-state').style.display = '';
-    document.getElementById('empty-state').innerHTML = `<div class="empty-icon">📭</div>No GPS pings recorded for<br><strong>${driverId}</strong> on <strong>${date}</strong>`;
+    document.getElementById('empty-state').style.display   = '';
+    document.getElementById('empty-state').innerHTML =
+      `<div class="empty-icon">📭</div>No GPS pings for<br><strong>${driverId}</strong> on <strong>${date}</strong>`;
     return;
   }
 
-  // Build colour-coded polyline segments
-  const latLngs = points.map(p => [p.lat, p.lng]);
-
-  // Draw each segment with its own colour
-  for (let i = 0; i < points.length - 1; i++) {
-    const frac  = pointFraction(points[i].timestamp);
+  // Draw colour-coded polyline segments
+  for (let i = 0; i < renderPoints.length - 1; i++) {
+    const frac  = pointFraction(renderPoints[i].timestamp);
     const color = timeColor(frac);
-    L.polyline([[points[i].lat, points[i].lng], [points[i+1].lat, points[i+1].lng]], {
-      color, weight: 4, opacity: .9, lineJoin: 'round', lineCap: 'round',
-    }).addTo(map);
+    const layer = L.polyline(
+      [[renderPoints[i].lat, renderPoints[i].lng], [renderPoints[i+1].lat, renderPoints[i+1].lng]],
+      { color, weight: 4, opacity: .9, lineJoin: 'round', lineCap: 'round' }
+    ).addTo(map);
+    trailLayers.push(layer);
   }
 
   // Start dot
-  const startDot = L.circleMarker([points[0].lat, points[0].lng], {
+  const s = rawPoints[0];
+  const startDot = L.circleMarker([s.lat, s.lng], {
     radius: 7, color: '#fff', weight: 2, fillColor: '#22C55E', fillOpacity: 1,
-  }).addTo(map).bindTooltip(`▶ Start · ${fmt(points[0].timestamp)}`, { permanent: false });
+  }).addTo(map).bindTooltip(`▶ Start · ${fmt(s.timestamp)}`);
+  trailLayers.push(startDot);
 
   // End dot
-  const endPt = points[points.length - 1];
-  const endDot = L.circleMarker([endPt.lat, endPt.lng], {
+  const e = rawPoints[rawPoints.length - 1];
+  const endDot = L.circleMarker([e.lat, e.lng], {
     radius: 7, color: '#fff', weight: 2, fillColor: '#ef4444', fillOpacity: 1,
-  }).addTo(map).bindTooltip(`⏹ Last ping · ${fmt(endPt.timestamp)}`, { permanent: false });
+  }).addTo(map).bindTooltip(`⏹ Last ping · ${fmt(e.timestamp)}`);
+  trailLayers.push(endDot);
 
-  // Hourly markers along the trail
-  addHourlyMarkers(points);
+  // Hourly labels
+  addHourlyMarkers(rawPoints);
 
-  // Interactive invisible hit-targets on every point
-  points.forEach((p, i) => {
-    if (i % 3 !== 0) return; // every 3rd point to avoid overload
+  // Invisible hit-targets for hover tooltip (on raw points)
+  rawPoints.forEach((p, i) => {
+    if (i % 3 !== 0) return;
     const m = L.circleMarker([p.lat, p.lng], {
       radius: 5, color: 'transparent', weight: 0, fillColor: 'transparent', fillOpacity: 0,
     }).addTo(map);
-    m.on('mouseover', (e) => showTooltip(e.originalEvent, p));
+    m.on('mouseover', (ev) => showTooltip(ev.originalEvent, p));
     m.on('mouseout', hideTooltip);
     m.on('click', () => map.flyTo([p.lat, p.lng], 15, { duration: .8 }));
-    trailDotMarkers.push(m);
+    trailLayers.push(m);
   });
 
-  // Fit map
-  map.flyToBounds(L.latLngBounds(latLngs).pad(.15), { duration: 1.2 });
+  // Fit map to raw GPS bounds
+  const bounds = L.latLngBounds(rawPoints.map(p => [p.lat, p.lng]));
+  map.flyToBounds(bounds.pad(.15), { duration: 1.2 });
 
-  // Stats
-  updateStats(points, driverId);
+  // Stats (always use raw GPS pings for accuracy)
+  updateStats(rawPoints, driverId, snapped);
 
   // Map badge
   const driverName = document.getElementById('driver-select').selectedOptions[0]?.text.split(' (')[0] || driverId;
-  showBadge(driverName, date);
+  showBadge(driverName, date + (snapped ? ' 🛣️' : ''));
 }
 
 function addHourlyMarkers(points) {
-  if (!points.length) return;
   let lastHour = -1;
   points.forEach(p => {
-    const d = new Date(p.timestamp);
-    const h = d.getUTCHours();
-    if (h !== lastHour) {
-      lastHour = h;
-      const label = `${String(h).padStart(2,'0')}:00`;
-      const frac  = pointFraction(p.timestamp);
-      const color = timeColor(frac);
-      const icon  = L.divIcon({
-        className: '',
-        html: `<div style="background:${color};color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:20px;border:1.5px solid rgba(255,255,255,.3);white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.4)">${label}</div>`,
-        iconAnchor: [20, 10],
-      });
-      const m = L.marker([p.lat, p.lng], { icon, interactive: false }).addTo(map);
-      trailDotMarkers.push(m);
-    }
+    const h = new Date(p.timestamp).getUTCHours();
+    if (h === lastHour) return;
+    lastHour = h;
+    const label = `${String(h).padStart(2,'0')}:00`;
+    const color = timeColor(pointFraction(p.timestamp));
+    const icon  = L.divIcon({
+      className: '',
+      html: `<div style="background:${color};color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:20px;border:1.5px solid rgba(255,255,255,.3);white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.4)">${label}</div>`,
+      iconAnchor: [20, 10],
+    });
+    const m = L.marker([p.lat, p.lng], { icon, interactive: false }).addTo(map);
+    trailLayers.push(m);
   });
 }
 
-function updateStats(points, driverId) {
+function updateStats(points, driverId, snapped) {
   document.getElementById('stats-section').style.display = '';
 
-  // Distance (haversine sum)
   let totalM = 0;
-  for (let i = 1; i < points.length; i++) {
+  for (let i = 1; i < points.length; i++)
     totalM += haversine(points[i-1].lat, points[i-1].lng, points[i].lat, points[i].lng);
-  }
-  const totalKm = (totalM / 1000).toFixed(1);
+
   const totalMi = (totalM / 1609.34).toFixed(1);
 
-  document.getElementById('stat-dist').textContent  = `${totalMi} mi`;
+  document.getElementById('stat-dist').innerHTML  =
+    `${totalMi} mi${snapped ? '<span class="road-badge">ROAD</span>' : ''}`;
   document.getElementById('stat-pings').textContent = points.length;
   document.getElementById('stat-start').textContent = fmtShort(points[0].timestamp);
   document.getElementById('stat-end').textContent   = fmtShort(points[points.length-1].timestamp);
 
-  // Time legend bar
   buildLegendBar();
-
-  // Timeline — milestone every ~30 mins or significant gap
   buildTimeline(points);
 }
 
 function buildLegendBar() {
   const bar = document.getElementById('legend');
-  const n   = 100;
   bar.innerHTML = '';
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < 100; i++) {
     const d = document.createElement('div');
     d.className = 'legend-bar';
-    d.style.background = timeColor(i / n);
+    d.style.background = timeColor(i / 100);
     bar.appendChild(d);
   }
 }
@@ -433,18 +555,15 @@ function buildLegendBar() {
 function buildTimeline(points) {
   const tl = document.getElementById('timeline');
   tl.innerHTML = '';
-  // Pick one point per hour
   const seen = new Set();
-  const picks = points.filter(p => {
+  points.filter(p => {
     const h = new Date(p.timestamp).getUTCHours();
     if (seen.has(h)) return false;
     seen.add(h); return true;
-  });
-  picks.forEach(p => {
-    const frac  = pointFraction(p.timestamp);
-    const color = timeColor(frac);
+  }).forEach(p => {
+    const color = timeColor(pointFraction(p.timestamp));
     const spd   = p.speed != null ? `${(p.speed * 2.237).toFixed(0)} mph` : '';
-    const el = document.createElement('div');
+    const el    = document.createElement('div');
     el.className = 'tl-item';
     el.innerHTML = `
       <div class="tl-dot" style="background:${color}"></div>
@@ -459,14 +578,9 @@ function buildTimeline(points) {
 }
 
 function clearTrailLayers() {
-  map.eachLayer(l => {
-    if (l instanceof L.Polyline || l instanceof L.CircleMarker || l instanceof L.Marker) {
-      if (l !== liveMarker && l !== livePolyline) map.removeLayer(l);
-    }
-  });
-  trailDotMarkers = [];
-  if (liveMarker)   { map.removeLayer(liveMarker);   liveMarker   = null; }
-  if (livePolyline) { map.removeLayer(livePolyline); livePolyline = null; }
+  trailLayers.forEach(l => { try { map.removeLayer(l); } catch(_){} });
+  trailLayers = [];
+  if (liveMarker) { map.removeLayer(liveMarker); liveMarker = null; }
 }
 
 // ── Live updates via Socket.IO ────────────────────────────────────────────────
@@ -476,7 +590,7 @@ function setupLive(driverId, date) {
   const isToday  = date === todayUTC;
 
   document.getElementById('live-row').style.display = isToday ? 'flex' : 'none';
-  if (!isToday) return;  // Only listen live for today
+  if (!isToday) return;
 
   if (socket) { socket.disconnect(); socket = null; }
 
@@ -490,7 +604,6 @@ function setupLive(driverId, date) {
     document.getElementById('live-dot').classList.remove('pulse');
     document.getElementById('live-txt').textContent = 'Reconnecting…';
   });
-
   socket.on('driver:location', (data) => {
     if (data.driverId !== driverId) return;
     const pt = { lat: data.lat, lng: data.lng, heading: data.heading, speed: data.speed, timestamp: new Date().toISOString() };
@@ -501,10 +614,8 @@ function setupLive(driverId, date) {
 }
 
 function extendLiveTrail(pt) {
-  const frac  = pointFraction(pt.timestamp);
-  const color = timeColor(frac);
+  const color = timeColor(pointFraction(pt.timestamp));
 
-  // Update live marker
   if (!liveMarker) {
     const icon = L.divIcon({
       className: '',
@@ -516,22 +627,19 @@ function extendLiveTrail(pt) {
     liveMarker.setLatLng([pt.lat, pt.lng]);
   }
 
-  // Extend coloured polyline
   if (livePoints.length >= 2) {
     const prev = livePoints[livePoints.length - 2];
-    L.polyline([[prev.lat, prev.lng], [pt.lat, pt.lng]], {
-      color, weight: 4, opacity: .9,
-    }).addTo(map);
+    const seg  = L.polyline([[prev.lat, prev.lng], [pt.lat, pt.lng]], { color, weight: 4, opacity: .9 }).addTo(map);
+    trailLayers.push(seg);
   }
 
-  // Update last-ping stat
   document.getElementById('stat-end').textContent   = fmtShort(pt.timestamp);
-  document.getElementById('stat-pings').textContent = livePoints.length;
+  document.getElementById('stat-pings').textContent = trailPoints.length + livePoints.length;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fitTrail() {
-  const pts = livePoints.length ? livePoints : trailPoints;
+  const pts = (livePoints.length ? livePoints : trailPoints);
   if (!pts.length) return;
   map.flyToBounds(L.latLngBounds(pts.map(p => [p.lat, p.lng])).pad(.15), { duration: 1.2 });
 }
@@ -540,44 +648,36 @@ function toggleLiveFollow() {
   document.getElementById('follow-btn').style.background = liveFollow ? 'rgba(34,197,94,.25)' : '';
   document.getElementById('follow-btn').title = liveFollow ? 'Stop following' : 'Follow live';
 }
-function showBadge(name, date) {
+function showBadge(name, sub) {
   document.getElementById('map-badge').style.display = '';
-  document.getElementById('mb-title').textContent = name;
-  document.getElementById('mb-sub').textContent   = date;
+  document.getElementById('mb-title').textContent    = name;
+  document.getElementById('mb-sub').textContent      = sub;
 }
 
-// Tooltip
 const tooltip = document.getElementById('time-tooltip');
 function showTooltip(e, p) {
   tooltip.style.display = 'block';
   document.getElementById('tt-time').textContent   = fmt(p.timestamp);
   document.getElementById('tt-speed').textContent  = p.speed != null ? `${(p.speed * 2.237).toFixed(0)} mph` : '';
   document.getElementById('tt-coords').textContent = `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`;
-  const x = e.clientX - 308;
-  const y = e.clientY - 10;
-  tooltip.style.left = x + 'px';
-  tooltip.style.top  = y + 'px';
+  tooltip.style.left = (e.clientX - 308) + 'px';
+  tooltip.style.top  = (e.clientY - 10)  + 'px';
 }
 function hideTooltip() { tooltip.style.display = 'none'; }
 
 function fmt(ts) {
-  const d = new Date(ts);
-  return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'UTC' }) + ' UTC';
+  return new Date(ts).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit', timeZone:'UTC' }) + ' UTC';
 }
 function fmtShort(ts) {
-  return new Date(ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
+  return new Date(ts).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', timeZone:'UTC' });
 }
-
 function haversine(lat1, lng1, lat2, lng2) {
-  const R  = 6371000;
-  const dL = (lat2 - lat1) * Math.PI / 180;
-  const dG = (lng2 - lng1) * Math.PI / 180;
-  const a  = Math.sin(dL/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dG/2)**2;
+  const R = 6371000, dL = (lat2-lat1)*Math.PI/180, dG = (lng2-lng1)*Math.PI/180;
+  const a = Math.sin(dL/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dG/2)**2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
-// Default date = today UTC
 document.getElementById('date-input').value = new Date().toISOString().slice(0, 10);
 loadDriversList();
 </script>
